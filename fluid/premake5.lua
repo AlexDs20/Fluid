@@ -35,5 +35,7 @@ project "Fluid"
         "src/"
     }
 
-    files "src/**.cpp"
-    files "src/**.hpp"
+    files {
+        "src/**.cpp",
+        "src/**.hpp"
+    }
