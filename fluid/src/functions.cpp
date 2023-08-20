@@ -169,7 +169,7 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float d
 };
 
 void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float dy) {
-    static Tensor Res = P;
+    // static Tensor Res = P;
     static Tensor pit = P;
     pit = P;
 
@@ -233,10 +233,32 @@ void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float 
 
 };
 
-void compute_rit(float& rit) {
-    rit *= 2;
-};
+void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, float dx, float dy, float dt) {
+    const static float dxinv = 1.0f / dx;
+    const static float dyinv = 1.0f / dy;
 
-void compute_uv(){};
+    const static float imax = U.imax();
+    const static float jmax = U.jmax();
+
+    float dtdx = dt * dxinv;
+    float dtdy = dt * dyinv;
+
+    float pipj;
+    float pij;
+    float pijp;
+
+    for (int i=1; i!=imax+1; ++i) {
+        for (int j=1; j!=jmax+1; ++j) {
+            pipj = P({i+1, j});
+            pij  = P({i, j});
+            pijp = P({i, j+1});
+
+            if (i!=imax)
+                U({i, j}) = F({i, j}) - dtdx * (pipj - pij);
+            if (j!=jmax)
+            V({i, j}) = G({i, j}) - dtdy * (pijp - pij);
+        }
+    }
+};
 
 

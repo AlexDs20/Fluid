@@ -13,8 +13,8 @@ int main(int argc, char** argv) {
 
     // Fluid
     float Re = 100.0f;
-    float u0 = 3.0f;
-    float v0 = 5.0f;
+    float u0 = 0.0f;
+    float v0 = 0.0f;
     float p0 = 0.0f;
 
     // time
@@ -56,23 +56,21 @@ int main(int argc, char** argv) {
     Tensor RHS({imax+2, jmax+2});
     Tensor OBS({imax+2, jmax+2});
 
-    while (n<3) {
+    while (t < t_max) {
+        std::cout << t << "/" << t_max << "\t" << dt << std::endl;
         dt = adaptive_time_step_size(U, V, dx, dy, Re, tau, dt);
         set_boundary_values(U, V);
         set_object_boundary_values(U, V, OBS);
         compute_FG(F, G, U, V, dt, Re, dx, dy, gamma);
         compute_rhs_pressure(RHS, F, G, dx, dy, dt);
 
-        std::cout << t << "/" << t_max << "\t" << dt << std::endl;
-
         it = 0;
         while (it<it_max && rit > eps * norm_p0) {
             SOR(P, rit, RHS, omega, dx, dy);
-            //compute_rit(rit);
             ++it;
         }
 
-        compute_uv();
+        compute_uv(U, V, F, G, P, dx, dy ,dt);
 
         t += dt;
         n += 1;
