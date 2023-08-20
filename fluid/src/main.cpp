@@ -56,16 +56,16 @@ int main(int argc, char** argv) {
     Tensor RHS({imax+2, jmax+2});
     Tensor OBS({imax+2, jmax+2});
 
-    while (t < t_max) {
+    while (n<3) {
+        std::cout << V << std::endl;
         dt = adaptive_time_step_size(U, V, dx, dy, Re, tau, dt);
         set_boundary_values(U, V);
-        std::cout << U << std::endl;
-        std::cout << V << std::endl;
-        return 1;
         set_object_boundary_values(U, V, OBS);
-        compute_FG(F, G, U, V, dt, Re);
-        compute_rhs_pressure(RHS, F, G, dx, dy, dt);
-        it = 0;
+        // compute_FG(F, G, U, V, dt, Re, dx, dy, gamma);
+        // compute_rhs_pressure(RHS, F, G, dx, dy, dt);
+        // it = 0;
+
+        // std::cout << t << "/" << t_max << "\t" << dt << std::endl;
 
         // while (it<it_max && rit > eps * norm_p0) {
         //     std::cout << t << "\t" << it << std::endl;

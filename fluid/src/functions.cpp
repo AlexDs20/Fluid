@@ -21,7 +21,7 @@ void set_boundary_values(Tensor& U, Tensor& V){
     // Top/Bottom: NO SLIP
     for (int i=0; i!=U.shape(0); ++i) {
         V({i, 0}) = 0.0f;
-        V({i, jmax-1}) = 0.0f;
+        V({i, jmax}) = 0.0f;
         U({i, 0}) = -U({i, 1});
         U({i, jmax}) = -U({i, jmax-1});
     }
@@ -42,19 +42,79 @@ void set_object_boundary_values(Tensor& U, Tensor& V, Tensor& OBS) {
     // TODO
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re) {
-    float dudxdx = 0.0f;
-    float dudydy = 0.0f;
-    float duudx = 0.0f;
-    float duvdy = 0.0f;
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re, float dx, float dy, float gamma) {
+    int imax = F.imax();
+    int jmax = F.jmax();
+
+    float Reinv = 1.0f/Re;
+    float dxinv = 1.0f/dx;
+    float dyinv = 1.0f/dy;
+
+    // F
+    float dudxdx;
+    float dudydy;
+    float duudx;
+    float duvdy;
+
+    // G
+    float dvdxdx;
+    float dvdydy;
+    float duvdx;
+    float dvvdy;
+
+    // Good for cache?
+    float uijm;
+    float uij;
+    float uijp;
+
+    float uimj;
+    float uipj;
+
+    float vijm;
+    float vij;
+    float vijp;
+
+    float vimj;
+    float vipjm;
+    float vipj;
+
+    float one, two, three, four;
+
+    for (int i=1; i!=imax; ++i) {
+        for (int j=1; j!=jmax; ++j) {
+            uijm = U({i,   j-1});
+            uij  = U({i,   j});
+            uijp = U({i,   j+1});
+            uimj = U({i-1, j});
+            uipj = U({i+1, j});
+
+            vijm = V({i,   j-1});
+            vij  = V({i,   j});
+            vijp = V({i,   j+1});
+            vimj = V({i-1, j});
+            vipjm= V({i+1, j-1});
+            vipj = V({i+1, j});
+
+            dudxdx = (uipj - 2*uij + uimj) * dxinv;
+            dudydy = (uijp - 2*uij + uijm) * dyinv;
+
+            one   = uij + uipj;
+            three = uimj + uij;
+            duudx = dxinv * 0.25           * (      one  * one -      three  * three )       \
+                    + gamma * dxinv * 0.25 * ( fabs(one) * one - fabs(three) * three );
+
+            one   = vij + vipj;
+            two   = uij + uijp;
+            three = vijm + vipjm;
+            four  = uijm + uij;
+            duvdy = dyinv * 0.25           * (      one  * two -       three  * four )      \
+                    + gamma * dyinv * 0.25 * ( fabs(one) * two -  fabs(three) * four );
+
+            F({i, j}) = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy );
+        }
+    }
 
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);
-
-
-    float dvdxdx = 0.0f;
-    float dvdydy = 0.0f;
-    float duvdx = 0.0f;
-    float dvvdy = 0.0f;
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);
 };
 
