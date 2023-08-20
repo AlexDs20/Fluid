@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
     // pressure
     int it = 0;
     int it_max = 10;
-    float rit = 1.0f;
+    float rit = 0.0f;
     float eps = 0.01f;
     float omega = 0.7;
     float gamma = 0.5;
@@ -57,22 +57,20 @@ int main(int argc, char** argv) {
     Tensor OBS({imax+2, jmax+2});
 
     while (n<3) {
-        std::cout << V << std::endl;
         dt = adaptive_time_step_size(U, V, dx, dy, Re, tau, dt);
         set_boundary_values(U, V);
         set_object_boundary_values(U, V, OBS);
-        // compute_FG(F, G, U, V, dt, Re, dx, dy, gamma);
-        // compute_rhs_pressure(RHS, F, G, dx, dy, dt);
-        // it = 0;
+        compute_FG(F, G, U, V, dt, Re, dx, dy, gamma);
+        compute_rhs_pressure(RHS, F, G, dx, dy, dt);
 
-        // std::cout << t << "/" << t_max << "\t" << dt << std::endl;
+        std::cout << t << "/" << t_max << "\t" << dt << std::endl;
 
-        // while (it<it_max && rit > eps * norm_p0) {
-        //     std::cout << t << "\t" << it << std::endl;
-        //     SOR();
-        //     compute_rit(rit);
-        //     ++it;
-        // }
+        it = 0;
+        while (it<it_max && rit > eps * norm_p0) {
+            SOR(P, rit, RHS, omega, dx, dy);
+            //compute_rit(rit);
+            ++it;
+        }
 
         compute_uv();
 

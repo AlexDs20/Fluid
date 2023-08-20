@@ -11,7 +11,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt
 
 void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float dx, float dy, float dt);
 
-void SOR();
+void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float dy);
 
 void compute_rit(float& rit);
 
