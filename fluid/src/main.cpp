@@ -44,13 +44,14 @@ int main(int argc, char** argv) {
     );
     int sx = 32;
     int sy = 32;
-    Tensor U({3, sx, sy}, 0.05f);
+    Tensor U({1, sx, sy}, 0.05f);
     for (int i=0; i!=sx;++i)
         for (int j=0; j!=sy;++j) {
-            U({0, i, j}) = 0.0;
-            U({1, i, j}) = 0.9;
-            U({2, i, j}) = 0.0;
+            U({0, i, j}) = 0.9;
+            // U({1, i, j}) = 0.9;
+            // U({2, i, j}) = 0.0;
         }
+    U({0, 1, 7}) = 0.0f;
     texture.load_texture(U.data(), sx, sy, 1);
 
     Quad q({0.0f, 0.0f, -1.0f}, {2.0f, 1.0f});
