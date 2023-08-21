@@ -42,6 +42,16 @@ int main(int argc, char** argv) {
     Texture texture(
             "resources/textures/container.jpg" \
     );
+    int sx = 32;
+    int sy = 32;
+    Tensor U({3, sx, sy}, 0.05f);
+    for (int i=0; i!=sx;++i)
+        for (int j=0; j!=sy;++j) {
+            U({0, i, j}) = 0.0;
+            U({1, i, j}) = 0.9;
+            U({2, i, j}) = 0.0;
+        }
+    texture.load_texture(U.data(), sx, sy, 1);
 
     Quad q({0.0f, 0.0f, -1.0f}, {2.0f, 1.0f});
     shader.use();
@@ -61,7 +71,7 @@ int main(int argc, char** argv) {
 
     glEnable(GL_DEPTH_TEST);
 
-    while (true) {
+    while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;

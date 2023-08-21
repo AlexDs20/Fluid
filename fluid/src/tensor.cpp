@@ -58,6 +58,9 @@ int Tensor::shape(int dim) const {
     else
         return _shape[_shape.size()+dim];
 };
+std::vector<float> Tensor::data() const {
+    return _data;
+};
 int Tensor::imax() const {
     return shape(-2)-2;
 };

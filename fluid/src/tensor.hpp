@@ -18,6 +18,7 @@ class Tensor {
         float max() const;
         float amax() const;
         int shape(int dim) const;
+        std::vector<float> data() const;
         int imax() const;
         int jmax() const;
 
