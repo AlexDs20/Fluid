@@ -1,0 +1,9 @@
+[submodule "fluid/deps/glfw"]
+	path = fluid/deps/glfw
+	url = git@github.com:glfw/glfw.git
+[submodule "fluid/deps/glm"]
+	path = fluid/deps/glm
+	url = git@github.com:g-truc/glm.git
+[submodule "fluid/deps/stb"]
+	path = fluid/deps/stb
+	url = https://github.com/nothings/stb

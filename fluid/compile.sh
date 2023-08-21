@@ -2,11 +2,12 @@
 
 CONFIG=$1
 
-rm -rf build generated
+# rm -rf build generated
 
 premake5 gmake2
 
 pushd generated
+make clean
 make -j$(nproc) config=$CONFIG
 popd
 

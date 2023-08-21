@@ -27,15 +27,25 @@ workspace "Fluid Simulation"
     targetdir ("build/bin/%{prj.name}/%{cfg.longname}")
     objdir ("build/obj/%{prj.name}/%{cfg.longname}")
 
+include "deps/glad.lua"
+include "deps/glfw.lua"
+include "deps/glm.lua"
+include "deps/stb.lua"
+
+
 project "Fluid"
-    kind "ConsoleApp"
+    kind "WindowedApp"
 
     includedirs
     {
-        "src/"
+        "src/",
+        "deps/stb/"
     }
 
     files {
         "src/**.cpp",
         "src/**.hpp"
     }
+
+    links { "GLAD", "GLFW", "STB" }
+
