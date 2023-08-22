@@ -14,7 +14,7 @@
 #include "texture.hpp"
 
 #include "tensor.hpp"
-#include "functions.hpp"
+#include "calculate.hpp"
 #include "parameters.hpp"
 
 unsigned int w = 1920;
