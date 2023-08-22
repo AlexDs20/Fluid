@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdexcept>
 #include "tensor.hpp"
 
 //------------------------------
@@ -20,6 +21,18 @@ Tensor::Tensor(std::vector<int> shape, float value): _shape(shape) {
         size *= *it;
 
     _data.assign(size, value);
+};
+
+Tensor::Tensor(std::vector<int> shape, std::vector<float> values): _shape(shape) {
+    std::vector<float>::size_type size = 1;
+
+    for (std::vector<int>::const_iterator it=_shape.begin(); it!=_shape.end(); ++it)
+        size *= *it;
+
+    if (values.size() != size)
+        throw std::domain_error ("Wrong sizes");
+
+    _data = values;
 };
 
 //------------------------------
@@ -51,6 +64,23 @@ float Tensor::amax() const {
             ret = std::max(fabs(_data[get_linear_index({i, j})]), fabs(ret));
     return ret;
 };
+float Tensor::min() const {
+    // Only take max in the domain, removes the extra edge cell
+    float ret = 1.0 / 0.0f;
+    for (int i=1; i!=shape(-2); ++i)
+        for (int j=1; j!=shape(-1); ++j)
+            ret = std::min(_data[get_linear_index({i, j})], ret);
+    return ret;
+};
+Tensor Tensor::normalize() const {
+    float min = this->min();
+    float max = this->max();
+
+    std::vector<float> vec = _data;
+    for (std::vector<float>::iterator it=vec.begin(); it!=vec.end(); ++it)
+        *it = (*it-min)/(max-min);
+    return Tensor(_shape, vec);
+};
 
 int Tensor::shape(int dim) const {
     if (dim>=0)
@@ -58,7 +88,10 @@ int Tensor::shape(int dim) const {
     else
         return _shape[_shape.size()+dim];
 };
-std::vector<float> Tensor::data() const {
+std::vector<float> Tensor::data() {
+    return _data;
+};
+const std::vector<float>& Tensor::data() const {
     return _data;
 };
 int Tensor::imax() const {

@@ -42,23 +42,15 @@ int main(int argc, char** argv) {
     Texture texture(
             "resources/textures/container.jpg" \
     );
-    // texture.load_texture(U.data(), sx, sy, 1);
 
-    Quad q({0.0f, 0.0f, -1.0f}, {2.0f, 1.0f});
+    Quad qu({-0.6f, 0.6f, -1.0f}, {2.0f, 1.0f});
+    Quad qv({ 0.6f, 0.6f, -1.0f}, {2.0f, 1.0f});
+    Quad qf({-0.6f,-0.6f, -1.0f}, {2.0f, 1.0f});
+    Quad qg({ 0.6f,-0.6f, -1.0f}, {2.0f, 1.0f});
+    Quad qp({-0.6f,-1.8f, -1.0f}, {2.0f, 1.0f});
     shader.use();
     shader.setInt("texture1", 0);
     texture.use();
-
-    glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 100.0f);
-    glm::mat4 view = camera.GetViewMatrix();
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::scale(model, q.scale());
-    model = glm::translate(model, q.position());
-    // model = glm::rotate(model, );
-
-    shader.setMat4f("proj", proj);
-    shader.setMat4f("view", view);
-    shader.setMat4f("model", model);
 
     glEnable(GL_DEPTH_TEST);
 
@@ -76,7 +68,7 @@ int main(int argc, char** argv) {
     Tensor OBS({p.imax+2, p.jmax+2});
 
 
-    while (!glfwWindowShouldClose(window) | p.t<p.t_max) {
+    while (!glfwWindowShouldClose(window) & (p.t<p.t_max)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
@@ -84,11 +76,19 @@ int main(int argc, char** argv) {
         std::cout.flush();
 
         processInput(window);
+        glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 100.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 model = glm::mat4(1.0f);
+        // model = glm::rotate(model, );
+
+        shader.setMat4f("proj", proj);
+        shader.setMat4f("view", view);
+        shader.setMat4f("model", model);
 
         //------------------------------
         p.dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt);
         set_boundary_values(U, V);
-        set_object_boundary_values(U, V, OBS);
+        // set_object_boundary_values(U, V, OBS);
         compute_FG(F, G, U, V, p.dt, p.Re, p.dx, p.dy, p.gamma);
         compute_rhs_pressure(RHS, F, G, p.dx, p.dy, p.dt);
 
@@ -104,55 +104,50 @@ int main(int argc, char** argv) {
         p.n += 1;
         //------------------------------
 
-        texture.load_texture(U.data(), p.imax+2, p.jmax+2, 1);
 
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        q.Draw();
+
+        texture.load_texture(U.data(), p.imax+2, p.jmax+2, 1);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, qu.scale());
+        model = glm::translate(model, qu.position());
+        shader.setMat4f("model", model);
+        qu.Draw();
+
+        texture.load_texture(V.data(), p.imax+2, p.jmax+2, 1);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, qv.scale());
+        model = glm::translate(model, qv.position());
+        shader.setMat4f("model", model);
+        qv.Draw();
+
+        texture.load_texture(F.data(), p.imax+2, p.jmax+2, 1);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, qf.scale());
+        model = glm::translate(model, qf.position());
+        shader.setMat4f("model", model);
+        qf.Draw();
+
+        texture.load_texture(G.data(), p.imax+2, p.jmax+2, 1);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, qg.scale());
+        model = glm::translate(model, qg.position());
+        shader.setMat4f("model", model);
+        qg.Draw();
+
+        texture.load_texture(P.data(), p.imax+2, p.jmax+2, 1);
+        model = glm::mat4(1.0f);
+        model = glm::scale(model, qp.scale());
+        model = glm::translate(model, qp.position());
+        shader.setMat4f("model", model);
+        qp.Draw();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     };
     glfwTerminate();
-    //--------------------
-
-    // Parameters p;
-
-    // Initialize the fields
-    // TODO: Investigate if order of the dim / grid or if grouping the fields together changes the perf.
-    // Tensor U({p.imax+2, p.jmax+2}, p.u0);
-    // Tensor V({p.imax+2, p.jmax+2}, p.v0);
-    // Tensor P({p.imax+2, p.jmax+2}, p.p0);
-    // Tensor EXT_X({p.imax+2, p.jmax+2});     // External forces
-    // Tensor EXT_Y({p.imax+2, p.jmax+2});     // External forces
-    // Tensor F({p.imax+2, p.jmax+2});
-    // Tensor G({p.imax+2, p.jmax+2});
-    // Tensor RHS({p.imax+2, p.jmax+2});
-    // Tensor OBS({p.imax+2, p.jmax+2});
-
-    // while (p.t < p.t_max) {
-    //     std::cout << p.t << "/" << p.t_max << "\t" << p.dt << std::endl;
-    //     p.dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt);
-    //     set_boundary_values(U, V);
-    //     set_object_boundary_values(U, V, OBS);
-    //     compute_FG(F, G, U, V, p.dt, p.Re, p.dx, p.dy, p.gamma);
-    //     compute_rhs_pressure(RHS, F, G, p.dx, p.dy, p.dt);
-
-    //     p.it = 0;
-    //     while (p.it<p.it_max && p.rit > p.eps * p.norm_p0) {
-    //         SOR(P, p.rit, RHS, p.omega, p.dx, p.dy);
-    //         ++p.it;
-    //     }
-
-    //     compute_uv(U, V, F, G, P, p.dx, p.dy, p.dt);
-
-    //     p.t += p.dt;
-    //     p.n += 1;
-    // }
-
-    //--------------------
     glfwDestroyWindow(window);
-    //--------------------
 
     return 0;
 }

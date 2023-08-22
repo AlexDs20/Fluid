@@ -11,14 +11,18 @@ class Tensor {
         Tensor(): _shape({0}) {};
         Tensor(std::vector<int> shape);
         Tensor(std::vector<int> shape, float value);
+        Tensor(std::vector<int> shape, std::vector<float> values);
 
         float& operator()(std::vector<int> idx);
         const float& operator()(std::vector<int> idx) const;
 
         float max() const;
         float amax() const;
+        float min() const;
+        Tensor normalize() const;
         int shape(int dim) const;
-        std::vector<float> data() const;
+        std::vector<float> data();
+        const std::vector<float>& data() const;
         int imax() const;
         int jmax() const;
 
