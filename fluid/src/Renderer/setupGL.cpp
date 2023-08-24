@@ -2,8 +2,8 @@
 #include <iostream>
 #include <string>
 
-#include "setupGL.hpp"
-#include "utils.hpp"
+#include "Renderer/setupGL.hpp"
+#include "Renderer/utils.hpp"
 
 GLFWwindow* setupGL(const std::string &title, unsigned int w, unsigned int h){
     // ------------------------------------

@@ -1,5 +1,5 @@
 #pragma once
-#include "tensor.hpp"
+#include "Math/tensor.hpp"
 
 float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float dy, float Re, float tau, float dt=0.5f);
 

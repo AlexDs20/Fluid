@@ -1,5 +1,5 @@
-#include "glad/glad.h"
-#include "object.hpp"
+#include <glad/glad.h>
+#include "Renderer/object.hpp"
 
 glm::vec3 Quad::scale() const {
     return glm::vec3(m_scale, 1.0f);

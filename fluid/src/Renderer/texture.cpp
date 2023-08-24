@@ -3,7 +3,8 @@
 #include <glad/glad.h>
 #include <string>
 #include <iostream>
-#include "texture.hpp"
+
+#include "Renderer/texture.hpp"
 
 Texture::Texture(std::string texture) {
     initialize();

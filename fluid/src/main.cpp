@@ -6,15 +6,16 @@
 #include <string>
 #include <math.h>
 
-#include "setupGL.hpp"
-#include "utils.hpp"
-#include "object.hpp"
-#include "shader.hpp"
-#include "camera.hpp"
-#include "texture.hpp"
+#include "Renderer/setupGL.hpp"
+#include "Renderer/utils.hpp"
+#include "Renderer/object.hpp"
+#include "Renderer/shader.hpp"
+#include "Renderer/camera.hpp"
+#include "Renderer/texture.hpp"
 
-#include "tensor.hpp"
-#include "calculate.hpp"
+#include "Math/tensor.hpp"
+#include "Physics/calculate.hpp"
+
 #include "parameters.hpp"
 
 unsigned int w = 1920;

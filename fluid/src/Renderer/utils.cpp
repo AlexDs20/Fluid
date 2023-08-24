@@ -2,7 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-#include "utils.hpp"
+#include "Renderer/utils.hpp"
 
 static float WASD_SPEED = 3.0f;
 

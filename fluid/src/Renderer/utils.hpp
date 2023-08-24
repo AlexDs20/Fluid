@@ -2,7 +2,7 @@
 #define UTILS_H
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include "camera.hpp"
+#include "Renderer/camera.hpp"
 
 extern Camera camera;
 extern float lastX, lastY;

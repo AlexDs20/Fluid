@@ -49,5 +49,5 @@ project "Fluid"
         "src/**.hpp"
     }
 
-    links { "GLAD", "GLFW", "STB" }
+    links { "GLAD", "GLFW", "STB", "GLM" }
 

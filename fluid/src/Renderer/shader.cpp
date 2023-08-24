@@ -4,7 +4,7 @@
 #include <iostream>
 #include <glm/glm.hpp>
 
-#include "shader.hpp"
+#include "Renderer/shader.hpp"
 
 
 Shader::Shader(std::string vertexPath, std::string fragmentPath)
