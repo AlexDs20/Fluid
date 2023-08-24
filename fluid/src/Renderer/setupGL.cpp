@@ -3,7 +3,7 @@
 #include <string>
 
 #include "Renderer/setupGL.hpp"
-#include "Renderer/utils.hpp"
+#include "Renderer/callbacks.hpp"
 
 GLFWwindow* setupGL(const std::string &title, unsigned int w, unsigned int h){
     // ------------------------------------

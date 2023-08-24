@@ -12,6 +12,7 @@
 #include "Renderer/shader.hpp"
 #include "Renderer/camera.hpp"
 #include "Renderer/texture.hpp"
+#include "Renderer/Renderer.hpp"
 
 #include "Math/tensor.hpp"
 #include "Physics/calculate.hpp"
@@ -33,13 +34,15 @@ int main(int argc, char** argv) {
         config = argv[1];
 
     //--------------------
-    std::string window_title("Simulation");
-    GLFWwindow* window = setupGL(window_title, w, h);
+    // Renderer renderer;
+
+    GLFWwindow* window = setupGL("Simulation", w, h);
 
     Shader shader( \
             "resources/shader/vertex.vs", \
             "resources/shader/fragment.fs" \
     );
+
     Texture texture(
             "resources/textures/container.jpg" \
     );

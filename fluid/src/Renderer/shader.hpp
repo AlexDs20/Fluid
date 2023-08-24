@@ -30,3 +30,7 @@ class Shader
 
     void checkCompileErrors(unsigned int shader, std::string type);
 };
+
+
+int logShaderCompile(const unsigned int shaderId, const char* shaderType);
+int logProgramLink(const unsigned int shaderProgram);

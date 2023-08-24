@@ -2,7 +2,7 @@
 
 CONFIG=$1
 
-# rm -rf build generated
+rm -rf build generated
 
 premake5 gmake2
 

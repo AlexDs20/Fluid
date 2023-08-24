@@ -17,8 +17,8 @@ struct Parameters {
     int dims = 2;
     int length_x = 2;
     int length_y = 1;
-    int imax = 30;
-    int jmax = 15;
+    int imax = 90;
+    int jmax = 45;
     float dx = (float)length_x / imax;
     float dy = (float)length_y / jmax;
 
