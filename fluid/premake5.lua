@@ -2,6 +2,7 @@ workspace "Fluid Simulation"
     location "generated"
     language "C++"
     architecture "x86_64"
+    toolset "clang"
 
     configurations { "debug", "release" }
 
@@ -23,6 +24,7 @@ workspace "Fluid Simulation"
         defines { "_MAC" }
 
     filter { }
+    flags { "ProfileGC", "ShowGC" }
 
     targetdir ("build/bin/%{prj.name}/%{cfg.longname}")
     objdir ("build/obj/%{prj.name}/%{cfg.longname}")

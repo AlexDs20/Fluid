@@ -38,10 +38,10 @@ Tensor::Tensor(std::vector<int> shape, std::vector<float> values): _shape(shape)
 //------------------------------
 //  OPERATORS element access
 //------------------------------
-float& Tensor::operator()(std::vector<int> idx) {
+float& Tensor::operator()(const std::vector<int>& idx) {
     return _data[get_linear_index(idx)];
 };
-const float& Tensor::operator()(std::vector<int> idx) const {
+const float& Tensor::operator()(const std::vector<int>& idx) const {
     return _data[get_linear_index(idx)];
 };
 
@@ -82,12 +82,6 @@ Tensor Tensor::normalize() const {
     return Tensor(_shape, vec);
 };
 
-int Tensor::shape(int dim) const {
-    if (dim>=0)
-        return _shape[dim];
-    else
-        return _shape[_shape.size()+dim];
-};
 std::vector<float> Tensor::data() {
     return _data;
 };

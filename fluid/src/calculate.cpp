@@ -31,7 +31,7 @@ void set_boundary_values(Tensor& U, Tensor& V){
     }
 
     // Left: input flow, Right: output
-    float u = 0.7;
+    float u = 0.8;
     float v = 0.0;
     for (int j=1; j!=jmax+1; ++j) {
         // U({0, j}) = u;

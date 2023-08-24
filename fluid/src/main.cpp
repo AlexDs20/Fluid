@@ -43,11 +43,9 @@ int main(int argc, char** argv) {
             "resources/textures/container.jpg" \
     );
 
-    Quad qu({-0.6f, 0.6f, -1.0f}, {2.0f, 1.0f});
-    Quad qv({ 0.6f, 0.6f, -1.0f}, {2.0f, 1.0f});
-    Quad qf({-0.6f,-0.6f, -1.0f}, {2.0f, 1.0f});
-    Quad qg({ 0.6f,-0.6f, -1.0f}, {2.0f, 1.0f});
-    Quad qp({-0.6f,-1.8f, -1.0f}, {2.0f, 1.0f});
+    Quad qu({-0.55f, 0.55f, -1.0f}, {2.0f, 1.0f});
+    Quad qv({ 0.55f, 0.55f, -1.0f}, {2.0f, 1.0f});
+    Quad qp({ 0.00f,-0.55f, -1.0f}, {2.0f, 1.0f});
     shader.use();
     shader.setInt("texture1", 0);
     texture.use();
@@ -72,11 +70,11 @@ int main(int argc, char** argv) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        std::cout << deltaTime*1000 << " ms\r";
+        std::cout << deltaTime*1000 << " ms\t" << p.t << " " << std::endl;
         std::cout.flush();
 
         processInput(window);
-        glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 100.0f);
+        glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 180.0f);
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
         // model = glm::rotate(model, );
@@ -122,20 +120,6 @@ int main(int argc, char** argv) {
         shader.setMat4f("model", model);
         qv.Draw();
 
-        texture.load_texture(F.data(), p.imax+2, p.jmax+2, 1);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, qf.scale());
-        model = glm::translate(model, qf.position());
-        shader.setMat4f("model", model);
-        qf.Draw();
-
-        texture.load_texture(G.data(), p.imax+2, p.jmax+2, 1);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, qg.scale());
-        model = glm::translate(model, qg.position());
-        shader.setMat4f("model", model);
-        qg.Draw();
-
         texture.load_texture(P.data(), p.imax+2, p.jmax+2, 1);
         model = glm::mat4(1.0f);
         model = glm::scale(model, qp.scale());
@@ -146,7 +130,7 @@ int main(int argc, char** argv) {
         glfwSwapBuffers(window);
         glfwPollEvents();
     };
-    glfwTerminate();
+    // glfwTerminate();
     glfwDestroyWindow(window);
 
     return 0;

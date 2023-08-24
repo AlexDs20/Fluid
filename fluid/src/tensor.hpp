@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <ostream>
 #include <vector>
 
@@ -13,14 +14,19 @@ class Tensor {
         Tensor(std::vector<int> shape, float value);
         Tensor(std::vector<int> shape, std::vector<float> values);
 
-        float& operator()(std::vector<int> idx);
-        const float& operator()(std::vector<int> idx) const;
+        float& operator()(const std::vector<int>& idx);
+        const float& operator()(const std::vector<int>& idx) const;
 
         float max() const;
         float amax() const;
         float min() const;
         Tensor normalize() const;
-        int shape(int dim) const;
+        int inline shape(int dim) const {
+            if (dim>=0)
+                return _shape[dim];
+            else
+                return _shape[_shape.size()+dim];
+        };
         std::vector<float> data();
         const std::vector<float>& data() const;
         int imax() const;
