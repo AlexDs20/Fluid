@@ -5,23 +5,25 @@
 #include <iostream>
 
 #include "Renderer/callbacks.hpp"
+#include "Renderer/shader.hpp"
+#include "Renderer/texture.hpp"
 
 class Renderer {
     public:
         Renderer() {
+            window = initialize_context();
         }
-    private:
+        ~Renderer() {
+        };
 
+    public:
         std::string windowTitle = "Simulation";
         unsigned int w = 1920;
         unsigned int h = 1080;
 
+        GLFWwindow* window;
+
         GLFWwindow* initialize_context() {
-            // ------------------------------------
-            //      Init glfw, glad, window
-            // ------------------------------------
-            // glfw: initialize and configure
-            // ----------------------------------
             glfwInit();
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -31,11 +33,9 @@ class Renderer {
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-            // glfw window creation
-            // --------------------
             GLFWwindow *window = glfwCreateWindow(w, h, windowTitle.c_str(), NULL, NULL);
 
-            if (window == NULL)
+            if (window == nullptr)
             {
                 std::cout << "Failed to create GLFW window" << std::endl;
                 glfwTerminate();

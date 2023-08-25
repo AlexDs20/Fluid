@@ -2,10 +2,20 @@
 
 #include <vector>
 #include <glm/glm.hpp>
+#include "Math/tensor.hpp"
+
+struct Placement {
+    Placement(glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec2 scale = glm::vec2(1.0f, 1.0f), glm::vec2 orientation = glm::vec2(0.0f, 0.0f)): \
+        position(pos), scale(scale), orientation(orientation) {};
+    glm::vec3 position;
+    glm::vec2 scale;
+    glm::vec2 orientation;
+    Tensor* tensor;
+};
 
 class Quad {
     public:
-        Quad(glm::vec3 m_position = glm::vec3(0.0, 0.0, 0.0), glm::vec2 m_scale = glm::vec2(1.0, 1.0));
+        Quad();
         ~Quad();
         void Draw() const;
         glm::vec3 position() const;

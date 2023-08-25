@@ -9,7 +9,7 @@ struct Parameters {
 
     // time
     float t = 0;
-    float t_max = 10;
+    float t_max = 50;
     float dt=0.5;
     float tau = 1.0;
 
@@ -24,7 +24,7 @@ struct Parameters {
 
     // pressure
     int it = 0;
-    int it_max = 10;
+    int it_max = 30;
     float rit = 0.0f;
     float eps = 0.01f;
     float omega = 0.7f;

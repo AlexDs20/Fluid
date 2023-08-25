@@ -9,6 +9,7 @@ class Shader
 {
   public:
     // constructor reads and builds the shader
+    Shader(){};
     Shader(std::string vertexPath, std::string fragmentPath);
     ~Shader();
 

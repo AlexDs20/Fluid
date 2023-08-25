@@ -14,7 +14,7 @@ void Quad::Draw() const {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 };
 
-Quad::Quad(glm::vec3 position, glm::vec2 scale): m_position(position), m_scale(scale) {
+Quad::Quad() {
     m_initialize();
 };
 

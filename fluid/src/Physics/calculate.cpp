@@ -7,10 +7,7 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
     const static float dyinv2 = 1.0f / (dy*dy);
     const static float Re_dt = ( Re / (2.0f * (dxinv2 + dyinv2)) );
 
-    float ret = std::min(
-            dt,
-            Re_dt
-            );
+    float ret = std::min(dt, Re_dt);
 
     float dt_v_max = std::min(dx / U.amax(), dy / V.amax());
 
@@ -19,8 +16,8 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
 
 void set_boundary_values(Tensor& U, Tensor& V){
     // Currently hard-code up/down left/right
-    int imax = U.imax();
-    int jmax = U.jmax();
+    const static int imax = U.imax();
+    const static int jmax = U.jmax();
 
     // Top/Bottom: NO SLIP
     for (int i=1; i!=imax+1; ++i) {
@@ -29,26 +26,33 @@ void set_boundary_values(Tensor& U, Tensor& V){
         U({i, 0}) = -U({i, 1});
         U({i, jmax+1}) = -U({i, jmax});
     }
-
-    // Left: input flow, Right: output
-    float u = 0.8;
-    float v = 0.0;
+    // Left/Right: No Slip
     for (int j=1; j!=jmax+1; ++j) {
-        // U({0, j}) = u;
-        // V({0, j}) = v;
-        U({0, j}) = 0;
+        U({0, j}) = 0.0f;
         V({0, j}) = -V({1, j});
 
+        U({imax, j}) = 0.0f;
+        V({imax+1, j}) = -V({imax, j});
+    }
+
+};
+
+void set_object_boundary_values(Tensor& U, Tensor& V, Tensor& OBS) {
+    const static int imax = U.imax();
+    const static int jmax = U.jmax();
+
+    // Left: NO-SLIP, Right: outflow
+    for (int j=1; j!=jmax+1; ++j) {
         U({imax, j}) = U({imax-1, j});
         V({imax+1, j}) = V({imax, j});
     }
 
-    for (int j=(jmax+1)/2-2; j!=(jmax+1)/2+3;++j)
+    // Left: input flow
+    float u = 0.7;
+    for (int j=(jmax+1)/2-1; j!=(jmax+1)/2+2;++j)
+    {
         U({0, j}) = u;
-};
-
-void set_object_boundary_values(Tensor& U, Tensor& V, Tensor& OBS) {
-    // TODO
+    }
 };
 
 void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re, float dx, float dy, float gamma) {
@@ -120,7 +124,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt
             vipjm= V({i+1, j-1});
             vipj = V({i+1, j});
 
-            //if (i<imax)
+            if (i<imax)
             {
                 dudxdx = (uipj - 2*uij + uimj) * dxinv2;
                 dudydy = (uijp - 2*uij + uijm) * dyinv2;
@@ -146,7 +150,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt
                 F({i, j}) = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy + gx);
             }
 
-            //if (j<jmax)
+            if (j<jmax)
             {
                 dvdxdx = (vipj - 2 * vij + vimj) * dxinv2;
                 dvdydy = (vijp - 2 * vij + vijm) * dyinv2;

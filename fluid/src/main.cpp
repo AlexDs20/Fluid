@@ -34,22 +34,23 @@ int main(int argc, char** argv) {
         config = argv[1];
 
     //--------------------
-    // Renderer renderer;
-
-    GLFWwindow* window = setupGL("Simulation", w, h);
+    Renderer renderer;
+    GLFWwindow* window = renderer.window;
 
     Shader shader( \
             "resources/shader/vertex.vs", \
             "resources/shader/fragment.fs" \
     );
 
-    Texture texture(
-            "resources/textures/container.jpg" \
-    );
+    Texture texture;
 
-    Quad qu({-0.55f, 0.55f, -1.0f}, {2.0f, 1.0f});
-    Quad qv({ 0.55f, 0.55f, -1.0f}, {2.0f, 1.0f});
-    Quad qp({ 0.00f,-0.55f, -1.0f}, {2.0f, 1.0f});
+    std::vector<Placement> quads;
+    quads.push_back(Placement({-0.55f, 0.55f, -1.0f}, {2.0f, 1.0f}));
+    quads.push_back(Placement({ 0.55f, 0.55f, -1.0f}, {2.0f, 1.0f}));
+    quads.push_back(Placement({ 0.00f,-0.55f, -1.0f}, {2.0f, 1.0f}));
+
+    Quad q;
+
     shader.use();
     shader.setInt("texture1", 0);
     texture.use();
@@ -68,6 +69,10 @@ int main(int argc, char** argv) {
     Tensor G({p.imax+2, p.jmax+2});
     Tensor RHS({p.imax+2, p.jmax+2});
     Tensor OBS({p.imax+2, p.jmax+2});
+
+    quads[0].tensor = &U;
+    quads[1].tensor = &V;
+    quads[2].tensor = &P;
 
 
     while (!glfwWindowShouldClose(window) & (p.t<p.t_max)) {
@@ -90,7 +95,7 @@ int main(int argc, char** argv) {
         //------------------------------
         p.dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt);
         set_boundary_values(U, V);
-        // set_object_boundary_values(U, V, OBS);
+        set_object_boundary_values(U, V, OBS);
         compute_FG(F, G, U, V, p.dt, p.Re, p.dx, p.dy, p.gamma);
         compute_rhs_pressure(RHS, F, G, p.dx, p.dy, p.dt);
 
@@ -110,26 +115,15 @@ int main(int argc, char** argv) {
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        texture.load_texture(U.data(), p.imax+2, p.jmax+2, 1);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, qu.scale());
-        model = glm::translate(model, qu.position());
-        shader.setMat4f("model", model);
-        qu.Draw();
 
-        texture.load_texture(V.data(), p.imax+2, p.jmax+2, 1);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, qv.scale());
-        model = glm::translate(model, qv.position());
-        shader.setMat4f("model", model);
-        qv.Draw();
-
-        texture.load_texture(P.data(), p.imax+2, p.jmax+2, 1);
-        model = glm::mat4(1.0f);
-        model = glm::scale(model, qp.scale());
-        model = glm::translate(model, qp.position());
-        shader.setMat4f("model", model);
-        qp.Draw();
+        for (std::vector<Placement>::size_type i=0; i!=quads.size(); ++i) {
+            texture.load_texture(quads[i].tensor->data(), p.imax+2, p.jmax+2, 1);
+            model = glm::mat4(1.0f);
+            model = glm::scale(model, glm::vec3(quads[i].scale, 1.0f));
+            model = glm::translate(model, quads[i].position);
+            shader.setMat4f("model", model);
+            q.Draw();
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
