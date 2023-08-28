@@ -177,6 +177,16 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt
             }
         }
     }
+
+    // Set boundary conditions
+    for (int j=1; j!=jmax+1; ++j) {
+        F({0, j}) = U({0, j});
+        F({imax, j}) = U({imax, j});
+    }
+    for (int i=1; i!=imax+1; ++i) {
+        G({i, 0}) = V({i, 0});
+        G({i, jmax}) = V({i, jmax});
+    }
 };
 
 void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float dx, float dy, float dt) {
@@ -228,7 +238,7 @@ void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float 
             eiE = 0;
 
         for (int j=1; j!=jmax+1; ++j) {
-            // TODO: Handle boundary conditions
+            // Handle boundary conditions
             ejS = 1;
             if (j==1)
                 ejS = 0;
