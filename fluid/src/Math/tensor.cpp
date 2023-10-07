@@ -129,3 +129,78 @@ std::ostream& operator<<(std::ostream& os, const Tensor& T) {
     }
     return os;
 };
+
+
+
+//--------------------------------------------------
+//          TENSORBIT
+//--------------------------------------------------
+TensorBit::TensorBit(std::vector<int> shape): _shape(shape) {
+    TensorBit::size_type size = 1;
+
+    for (std::vector<int>::const_iterator it=_shape.begin(); it!=_shape.end(); ++it)
+        size *= *it;
+
+    _data.reserve(size);
+};
+
+TensorBit::TensorBit(std::vector<int> shape, std::bitset<5> value): _shape(shape) {
+    TensorBit::size_type size = 1;
+
+    for (std::vector<int>::const_iterator it=_shape.begin(); it!=_shape.end(); ++it)
+        size *= *it;
+
+    _data.assign(size, value);
+};
+
+std::bitset<5>& TensorBit::operator()(const std::vector<int>& idx) {
+    return _data[get_linear_index(idx)];
+};
+
+const std::bitset<5>& TensorBit::operator()(const std::vector<int>& idx) const {
+    return _data[get_linear_index(idx)];
+};
+
+std::vector<std::bitset<5>> TensorBit::data() {
+    return _data;
+};
+const std::vector<std::bitset<5>>& TensorBit::data() const {
+    return _data;
+};
+
+int TensorBit::imax() const {
+    return shape(-2)-2;
+};
+int TensorBit::jmax() const {
+    return shape(-1)-2;
+};
+
+TensorBit::size_type TensorBit::get_linear_index(std::vector<int> idx) const {
+    size_type linearIdx = 0;
+    size_type stride = 1;
+
+    // Packing technique 1: first dimension tightly packed
+    for (size_type i=0; i!=_shape.size(); ++i) {
+        linearIdx += idx[i] * stride;
+        stride *= _shape[i];
+    }
+
+    // Packing technique 2: last dimension tightly packed
+    // for (size_type i=_shape.size()-1; i!=-1; --i) {
+    //     linearIdx += idx[i] * stride;
+    //     stride *= _shape[i];
+    // }
+    return linearIdx;
+};
+
+std::ostream& operator<<(std::ostream& os, const TensorBit& T) {
+    int size_x = T._shape[T._shape.size()-2];
+    int size_y = T._shape[T._shape.size()-1];
+
+    for (int j=size_y-1; j>=0; --j) {
+        for (int i=0; i!=size_x; ++i)
+            os << T({i, j}) << "   ";
+        os << std::endl;
+    }
+    return os;
+};

@@ -2,11 +2,16 @@
 
 CONFIG=$1
 
-premake5 gmake2
+if [ ! -d "generated" ]; then
+    premake5 gmake2
+fi
 
-pushd generated
+pushd "generated"
     #make clean
     make -j$(nproc) config=$CONFIG
+    SUCCESS=$?
 popd
 
-./build/bin/Fluid/$CONFIG/Fluid
+if [ $SUCCESS -eq 0 ]; then
+    ./build/bin/Fluid/$CONFIG/Fluid
+fi
