@@ -3,10 +3,9 @@
 #include "Physics/calculate.hpp"
 
 
-float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float dy, float Re, float tau, float dt) {
+float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float dy, float Re, float tau, float dt, int imax, int jmax) {
     const static float dxinv2 = 1.0f / (dx*dx);
     const static float dyinv2 = 1.0f / (dy*dy);
-
     const static float Re_dt = 0.5f * Re / (dxinv2 + dyinv2);
 
     if ( (tau <= 0) | (tau > 1) ) {
@@ -14,8 +13,8 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
     }
 
     float absumax=0, absvmax=0;
-    for (int i=0; i<U.imax()+2; ++i){
-        for (int j=0; j<U.jmax()+2; ++j) {
+    for (int i=0; i<imax+2; ++i){
+        for (int j=0; j<jmax+2; ++j) {
             absumax = std::max(absumax, std::fabs(U({i, j})));
             absvmax = std::max(absvmax, std::fabs(V({i, j})));
         }
@@ -29,17 +28,14 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
     return ret;
 };
 
-
-void set_constant_flags(Boundary& boundary) {
+void set_constant_flags(Boundary& boundary, int imax, int jmax) {
     // Set the flags that do not change over time
     // Boundaries and sphere in the middle
-    const static int imax = boundary.cellType.imax();
-    const static int jmax = boundary.cellType.jmax();
     const static float isBoundary = 1;
     const static float isFluid = 0;
 
     // Sphere info
-    const int px = (imax+2) / 3;
+    const int px = (imax+2) / 4;
     const int py = (jmax+2) / 2;
     const float radius = std::min(imax, jmax) / 10;
 
@@ -79,11 +75,8 @@ void set_constant_flags(Boundary& boundary) {
     }
 };
 
-
-void set_boundary_values(Tensor& U, Tensor& V, const Boundary& boundary){
+void set_boundary_values(Tensor& U, Tensor& V, const Boundary& boundary, int imax, int jmax){
     // Currently hard-code up/down left/right
-    const static int imax = U.imax();
-    const static int jmax = U.jmax();
     const static float isBoundary = 1;
     const static float isFluid = 0;
 
@@ -141,10 +134,7 @@ void set_boundary_values(Tensor& U, Tensor& V, const Boundary& boundary){
     }
 };
 
-void set_specific_boundary_values(Tensor& U, Tensor& V) {
-    const static int imax = U.imax();
-    const static int jmax = U.jmax();
-
+void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
     // Outflow
     for (int j=1; j!=jmax+1; ++j) {
         U({imax, j}) = U({imax-1, j});
@@ -167,15 +157,12 @@ void set_specific_boundary_values(Tensor& U, Tensor& V) {
     }
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re, float dx, float dy, float gamma, const Boundary& boundary) {
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re, float dx, float dy, float gamma, const Boundary& boundary, int imax, int jmax) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
 
     const static float isBoundary = 1.0f;
     const static float isFluid = 0.0f;
-
-    const static int imax = F.imax();
-    const static int jmax = F.jmax();
 
     const static float Reinv = 1.0f/Re;
 
@@ -305,11 +292,9 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt
     }
 };
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float dx, float dy, float dt, const Boundary& boundary) {
+void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float dx, float dy, float dt, const Boundary& boundary, int imax, int jmax) {
     const static float dxinv = 1.0f/dx;
     const static float dyinv = 1.0f/dy;
-    const static float imax = F.imax();
-    const static float jmax = F.jmax();
 
     const float dtinv = 1.0f / dt;
 
@@ -334,9 +319,7 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float d
     }
 };
 
-void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float dy, const Boundary& boundary) {
-    const static int imax = P.imax();
-    const static int jmax = P.jmax();
+void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float dy, const Boundary& boundary, int imax, int jmax) {
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
     const static float dxinv2 = dxinv * dxinv;
@@ -406,12 +389,9 @@ void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float 
     }
 };
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, float dx, float dy, float dt, const Boundary& boundary) {
+void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, float dx, float dy, float dt, const Boundary& boundary, int imax, int jmax) {
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
-
-    const static float imax = U.imax();
-    const static float jmax = U.jmax();
 
     const static float isBoundary = 1.0f;
     const static float isFluid = 0.0f;
