@@ -33,11 +33,9 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 
-int main(int argc, char** argv) {
-    std::string config;
-    if (argc>1)
-        config = argv[1];
-
+int main() {
+    //--------------------
+    //  RENDERER
     //--------------------
     Renderer renderer;
     GLFWwindow* window = renderer.window;
@@ -58,14 +56,6 @@ int main(int argc, char** argv) {
     quads.push_back(Placement({xl,ys - 0*(size_y + space), -1.0f}, {2.0f, 1.0f}));
     quads.push_back(Placement({xr,ys - 0*(size_y + space), -1.0f}, {2.0f, 1.0f}));
     quads.push_back(Placement({xl,ys - 1*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xr,ys - 1*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xl,ys - 2*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xr,ys - 2*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xl,ys - 3*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xr,ys - 3*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xl,ys - 4*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xr,ys - 4*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xl,ys - 5*(size_y + space), -1.0f}, {2.0f, 1.0f}));
 
     Quad q;
 
@@ -76,7 +66,8 @@ int main(int argc, char** argv) {
     glEnable(GL_DEPTH_TEST);
 
     //--------------------
-    // Physics physics;
+    //  PHYSICS
+    //--------------------
     Parameters p;
     // Initialize the fields
     Tensor U({p.imax+2, p.jmax+2}, p.u0);
@@ -86,7 +77,6 @@ int main(int argc, char** argv) {
     Tensor G({p.imax+2, p.jmax+2}, p.v0);
     Tensor RHS({p.imax+2, p.jmax+2}, 0.0f);
 
-    // -----------
     // TODO
     Boundary boundary = {
         Tensor({p.imax+2, p.jmax+2}, 0.0f),         // cellType: 0 -> fluid
@@ -98,50 +88,40 @@ int main(int argc, char** argv) {
         Tensor({p.imax+2, p.jmax+2}, 0.0f),
     };
 
+    // Set flags for edges and obstacle     (because obstacles don't move)
+    set_constant_flags(boundary);
+
     quads[0].tensor = &U;
     quads[1].tensor = &V;
     quads[2].tensor = &P;
-    // quads[3].tensor = &boundary.cellType;
-    // quads[4].tensor = &F;
-    // quads[5].tensor = &G;
-    // quads[6].tensor = &RHS;
-    // quads[7].tensor = &boundary.NCell;
-    // quads[8].tensor = &boundary.SCell;
-    // quads[9].tensor = &boundary.WCell;
-    // quads[10].tensor = &boundary.ECell;
 
     float dt;
-
-    // Set flags for edges and obstacle
-    set_constant_flags(boundary);
-
-    while (!glfwWindowShouldClose(window) & (p.t<p.t_max)) {
+    int n = 0;
+    float t = 0;
+    while (!glfwWindowShouldClose(window) & (t<p.t_max)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        std::cout << deltaTime*1000 << " ms\t" << p.t << " " << "\t" << dt << "\t" << p.n << std::endl;
+        std::cout << deltaTime*1000 << " ms\t" << t << " " << "\t" << dt << "\t" << n << std::endl;
         std::cout.flush();
 
+        //------------------------------
+        //  RENDERER
         processInput(window);
         glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 180.0f);
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
-        // model = glm::rotate(model, );
 
         shader.setMat4f("proj", proj);
         shader.setMat4f("view", view);
         shader.setMat4f("model", model);
 
         //------------------------------
-        // physics.update(dt);
-        // set_boundary_flags(boundary);
+        //  PHYSICS
         set_boundary_values(U, V, boundary);
         set_specific_boundary_values(U, V);
-
-        dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt);
-
-        compute_FG(F, G, U, V, dt, p.Re, p.dx, p.dy, p.gamma, boundary);
-
+        dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt_max);
+        compute_FG(F, G, U, V, dt, p.Re, p.dx, p.dy, p.gamma, boundary);        // add p.gx, p.gy
         compute_rhs_pressure(RHS, F, G, p.dx, p.dy, dt, boundary);
 
         int it = 0;
@@ -149,16 +129,16 @@ int main(int argc, char** argv) {
         do {
             ++it;
             SOR(P, rit, RHS, p.omega, p.dx, p.dy, boundary);
-        } while (it<5);
-        // } while (it<p.it_max && rit > p.eps * p.norm_p0);
+        } while ( it < p.it_max && rit > p.eps);
 
         compute_uv(U, V, F, G, P, p.dx, p.dy, dt, boundary);
 
-        p.t += p.dt;
-        p.n++;
+        t += dt;
+        n++;
         //------------------------------
 
-
+        //------------------------------
+        //  RENDERER
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -173,14 +153,13 @@ int main(int argc, char** argv) {
         glfwSwapBuffers(window);
         glfwPollEvents();
 
-        if (p.n == 1)
+        if (n == 1)
         {
             std::chrono::seconds duration(1);
             std::this_thread::sleep_for(duration);
         }
 
     };
-    // glfwTerminate();
     glfwDestroyWindow(window);
 
     return 0;

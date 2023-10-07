@@ -22,7 +22,6 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
     }
 
     const float dt_v_max = std::min(dx / absumax, dy / absvmax);
-    // const float dt_v_max = std::min(dx / U.amax(), dy / V.amax());
 
     float ret = std::min(Re_dt, dt_v_max);
     ret = std::min(dt, tau*ret);
@@ -51,7 +50,7 @@ void set_constant_flags(Boundary& boundary) {
                 boundary.cellType({i, j}) = isBoundary;
             } else if (j==0 || j==jmax+1) {      // left / right
                 boundary.cellType({i, j}) = isBoundary;
-            } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // close to sphere
+            } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
                 boundary.cellType({i, j}) = isBoundary;
             } else {
                 boundary.cellType({i, j}) = isFluid;
@@ -59,6 +58,7 @@ void set_constant_flags(Boundary& boundary) {
         }
     }
 
+    // Set where the water is in the obstacle cells
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
             if (boundary.cellType({i, j}) == isBoundary) {
@@ -77,55 +77,6 @@ void set_constant_flags(Boundary& boundary) {
             }
         }
     }
-};
-
-
-void set_boundary_flags(Boundary& boundary) {
-    const static int imax = boundary.cellType.imax();
-    const static int jmax = boundary.cellType.jmax();
-    const static float isBoundary = 1.0f;
-    const static float isFluid = 0.0f;
-
-    // Put Sphere
-    int px = (imax+2) / 3;
-    int py = (jmax+2) / 2;
-    float radius = std::min(imax, jmax) / 10;
-
-    // Set all grid cells of obstacles as boundary
-    for (int i=0; i<imax+2; ++i) {
-        // boundary.cellType({i, 0}) = isBoundary;
-        // boundary.cellType({i, jmax+1}) = isBoundary;
-
-        for (int j=0; j<jmax+2; ++j) {
-            if (i==0 ||  i==(imax+1) || j==0 || j==(jmax+1))
-                boundary.cellType({i, j}) = isBoundary;
-            else
-                boundary.cellType({i, j}) = isFluid;
-
-            // boundary.cellType({0, j}) = isBoundary;
-            // boundary.cellType({imax+1, j}) = isBoundary;
-
-            // if ( (px-i)*(px-i)+(py-j)*(py-j) < radius*radius )
-            //     boundary.cellType({i, j}) = isBoundary;
-        }
-    }
-
-    for (int i=0; i<imax+2; ++i) {
-        for (int j=0; j<jmax+2; ++j) {
-            if (boundary.cellType({i, j})==isBoundary) {
-                if ((j!=jmax+1) && (boundary.cellType({i, j+1}) == isFluid))
-                    boundary.NCell({i, j}) = 1.0f;
-                if ((j!=0) && (boundary.cellType({i, j-1}) == isFluid))
-                    boundary.SCell({i, j}) = 1.0f;
-                if ((i!=0) && (boundary.cellType({i-1, j}) == isFluid))
-                    boundary.WCell({i, j}) = 1.0f;
-                if ((i!=imax+1) && (boundary.cellType({i+1, j}) == isFluid))
-                    boundary.ECell({i, j}) = 1.0f;
-            }
-        }
-    }
-
-    // TODO: Check if we have boundaries with fluid on opposite sides or 3 sides
 };
 
 
@@ -194,15 +145,18 @@ void set_specific_boundary_values(Tensor& U, Tensor& V) {
     const static int imax = U.imax();
     const static int jmax = U.jmax();
 
-    // Right: outflow
+    // Outflow
     for (int j=1; j!=jmax+1; ++j) {
         U({imax, j}) = U({imax-1, j});
         V({imax+1, j}) = V({imax, j});
     }
-    // for (int i=1; i!=imax+1; ++i) {
-    //     U({i, jmax+1}) = U({i, jmax});
-    //     V({i, jmax}) = V({i, jmax-1});
-    // }
+    for (int i=1; i!=imax+1; ++i) {
+        U({i, jmax+1}) = U({i, jmax});
+        V({i, jmax}) = V({i, jmax-1});
+
+        V({i, 0}) = V({i, 1});
+        U({i, 0}) = U({i, 1});
+    }
 
     // Left: input flow
     const float u = 0.8;
@@ -211,12 +165,6 @@ void set_specific_boundary_values(Tensor& U, Tensor& V) {
     {
         U({0, j}) = u;
     }
-
-    // const float v = 0.8;
-    // for (int i=(imax+1)/2-width/2; i!=(imax+1)/2+width/2+1;++i)
-    // {
-    //     V({i, 0}) = v;
-    // }
 };
 
 void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re, float dx, float dy, float gamma, const Boundary& boundary) {
@@ -375,7 +323,7 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float d
 
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
-            if (boundary.cellType({i, j})==isFluid) {       // TODO: Could delete this?
+            if (boundary.cellType({i, j})==isFluid) {
                 fimj = F({i-1, j});
                 fij  = F({i, j});
                 gijm = G({i, j-1});

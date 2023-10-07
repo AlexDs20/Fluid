@@ -15,8 +15,6 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
 
 void set_constant_flags(Boundary& boundary);
 
-void set_boundary_flags(Boundary& boundary);
-
 void set_boundary_values(Tensor& U, Tensor& V, const Boundary& boundary);
 
 void set_specific_boundary_values(Tensor& U, Tensor& V);
