@@ -2,7 +2,7 @@
 
 struct Parameters {
     // Fluid
-    const float Re = 5000;
+    const float Re = 10000;
     const float u0 = 0.0f;
     const float v0 = 0.0f;
     const float p0 = 0.0f;

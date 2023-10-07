@@ -2,7 +2,6 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include <bitset>
 
 class Tensor {
     friend std::ostream& operator<<(std::ostream& os, const Tensor& T);
@@ -10,16 +9,13 @@ class Tensor {
     public:
         typedef std::vector<float>::size_type size_type;
 
-        Tensor(): _shape({0}) {};
-        Tensor(std::vector<int> shape);
         Tensor(std::vector<int> shape, float value);
         Tensor(std::vector<int> shape, std::vector<float> values);
 
-        float& operator()(const std::vector<int>& idx);
-        const float& operator()(const std::vector<int>& idx) const;
+        float& operator()(int i, int j);
+        const float& operator()(int i, int j) const;
 
         float max() const;
-        float amax() const;
         float min() const;
         Tensor normalize() const;
         int inline shape(int dim) const {
@@ -30,11 +26,9 @@ class Tensor {
         };
         std::vector<float> data();
         const std::vector<float>& data() const;
-        int imax() const;
-        int jmax() const;
 
     private:
-        size_type inline get_linear_index(std::vector<int> idx) const;
+        size_type inline get_linear_index(int i, int j) const;
         std::vector<int> _shape;
         std::vector<float> _data;
 };
