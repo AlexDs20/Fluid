@@ -2,6 +2,7 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
+#include <bitset>
 
 class Tensor {
     friend std::ostream& operator<<(std::ostream& os, const Tensor& T);

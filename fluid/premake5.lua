@@ -45,8 +45,11 @@ project "Fluid"
     }
 
     files {
-        "src/**.cpp",
-        "src/**.hpp"
+        "src/*.cpp",
+        "src/*.hpp",
+        "src/Math/**",
+        "src/Physics/**",
+        "src/Renderer/**",
     }
 
     links { "GLAD", "GLFW", "STB", "GLM" }
