@@ -19,10 +19,10 @@ void set_boundary_values(Tensor& U, Tensor& V, const Boundary& boundary, int ima
 
 void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax);
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re, float dx, float dy, float gamma, const Boundary&, int imax, int jmax);
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Boundary&, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax);
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float dx, float dy, float dt, const Boundary&, int imax, int jmax);
+void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Boundary&, float dx, float dy, float dt, int imax, int jmax);
 
-void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float dy, const Boundary&, int imax, int jmax);
+void SOR(Tensor& P, const Tensor& RHS, const Boundary&, float& rit, float omega, float dx, float dy, int imax, int jmax);
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, float dx, float dy, float dt, const Boundary&, int imax, int jmax);
+void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Boundary&, float dx, float dy, float dt, int imax, int jmax);

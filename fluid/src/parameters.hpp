@@ -23,8 +23,8 @@ struct Parameters {
     const float dy = length_y / (float)jmax;
 
     // pressure
-    const int it_max = 5;
-    const float eps = 0.01f;
+    const int it_max = 20;
+    const float eps = 0.001f;
     const float omega = 1.5;
 
     // Derivative scheme

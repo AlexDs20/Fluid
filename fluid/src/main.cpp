@@ -77,6 +77,8 @@ int main() {
     Tensor G({p.imax+2, p.jmax+2}, p.v0);
     Tensor RHS({p.imax+2, p.jmax+2}, 0.0f);
 
+    Domain domain({p.imax+2, p.jmax+2}, Cell());
+
     // TODO
     Boundary boundary = {
         Tensor({p.imax+2, p.jmax+2}, 0.0f),         // cellType: 0 -> fluid
@@ -97,12 +99,12 @@ int main() {
 
     float dt;
     int n = 0;
-    float t = 0;
-    while (!glfwWindowShouldClose(window) & (t<p.t_max)) {
+    float simulated_t = 0;
+    float elapsed_t = 0;
+    while (!glfwWindowShouldClose(window) & (simulated_t<p.t_max)) {
         float currentFrame = glfwGetTime();
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
-        std::cout << deltaTime*1000 << " ms\t" << t << " " << "\t" << dt << "\t" << n << std::endl;
+        std::cout << "TIME: " << "Elapsed " << elapsed_t << "\t" << "Simulated: " << simulated_t << "\t";
+        std::cout << "frame: " << deltaTime*1000 << " ms\t" << "simulated step: " << dt << "\t" << "iter: " << n << "\t" << std::endl;
         std::cout.flush();
 
         //------------------------------
@@ -121,19 +123,19 @@ int main() {
         set_boundary_values(U, V, boundary, p.imax, p.jmax);
         set_specific_boundary_values(U, V, p.imax, p.jmax);
         dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt_max, p.imax, p.jmax);
-        compute_FG(F, G, U, V, dt, p.Re, p.dx, p.dy, p.gamma, boundary, p.imax, p.jmax);        // add p.gx, p.gy
-        compute_rhs_pressure(RHS, F, G, p.dx, p.dy, dt, boundary, p.imax, p.jmax);
+        compute_FG(F, G, U, V, boundary, dt, p.Re, p.dx, p.dy, p.gamma, p.imax, p.jmax);        // add p.gx, p.gy
+        compute_rhs_pressure(RHS, F, G, boundary, p.dx, p.dy, dt, p.imax, p.jmax);
 
         int it = 0;
         float rit = 0;
         do {
             ++it;
-            SOR(P, rit, RHS, p.omega, p.dx, p.dy, boundary, p.imax, p.jmax);
-        } while ( it < p.it_max && rit > p.eps);
+            SOR(P, RHS, boundary, rit, p.omega, p.dx, p.dy, p.imax, p.jmax);
+        } while (it < p.it_max && rit > p.eps);
 
-        compute_uv(U, V, F, G, P, p.dx, p.dy, dt, boundary, p.imax, p.jmax);
+        compute_uv(U, V, F, G, P, boundary, p.dx, p.dy, dt, p.imax, p.jmax);
 
-        t += dt;
+        simulated_t += dt;
         n++;
         //------------------------------
 
@@ -143,7 +145,7 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         for (std::vector<Placement>::size_type i=0; i!=quads.size(); ++i) {
-            texture.load_texture(quads[i].tensor->normalize().data(), p.imax+2, p.jmax+2, 1);
+            texture.load_texture(quads[i].tensor->data(), p.imax+2, p.jmax+2, 1);
             model = glm::mat4(1.0f);
             model = glm::scale(model, glm::vec3(quads[i].scale, 1.0f));
             model = glm::translate(model, quads[i].position);
@@ -158,6 +160,9 @@ int main() {
             std::chrono::seconds duration(1);
             std::this_thread::sleep_for(duration);
         }
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        elapsed_t += deltaTime;
 
     };
     glfwDestroyWindow(window);

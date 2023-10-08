@@ -157,7 +157,7 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
     }
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt, float Re, float dx, float dy, float gamma, const Boundary& boundary, int imax, int jmax) {
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Boundary& boundary, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
 
@@ -292,7 +292,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, float dt
     }
 };
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float dx, float dy, float dt, const Boundary& boundary, int imax, int jmax) {
+void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Boundary& boundary, float dx, float dy, float dt, int imax, int jmax) {
     const static float dxinv = 1.0f/dx;
     const static float dyinv = 1.0f/dy;
 
@@ -319,7 +319,7 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, float d
     }
 };
 
-void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float dy, const Boundary& boundary, int imax, int jmax) {
+void SOR(Tensor& P, const Tensor& RHS, const Boundary& boundary, float& rit, float omega, float dx, float dy, int imax, int jmax) {
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
     const static float dxinv2 = dxinv * dxinv;
@@ -389,7 +389,7 @@ void SOR(Tensor& P, float& rit, const Tensor& RHS, float omega, float dx, float 
     }
 };
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, float dx, float dy, float dt, const Boundary& boundary, int imax, int jmax) {
+void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Boundary& boundary, float dx, float dy, float dt, int imax, int jmax) {
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
 
