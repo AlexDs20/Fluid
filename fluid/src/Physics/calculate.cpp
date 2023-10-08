@@ -28,12 +28,9 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
     return ret;
 };
 
-void set_constant_flags(Boundary& boundary, int imax, int jmax) {
+void set_constant_flags(Domain& domain, int imax, int jmax) {
     // Set the flags that do not change over time
     // Boundaries and sphere in the middle
-    const static float isBoundary = 1;
-    const static float isFluid = 0;
-
     // Sphere info
     const int px = (imax+2) / 5;
     const int py = (jmax+2) / 2;
@@ -43,13 +40,13 @@ void set_constant_flags(Boundary& boundary, int imax, int jmax) {
         for (int j=0; j<jmax+2; ++j) {
             // Above and Below
             if (i==0 || i==imax+1) {
-                boundary.cellType(i, j) = isBoundary;
+                domain(i, j).obstacle = true;
             } else if (j==0 || j==jmax+1) {      // left / right
-                boundary.cellType(i, j) = isBoundary;
+                domain(i, j).obstacle = true;
             } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
-                boundary.cellType(i, j) = isBoundary;
+                domain(i, j).obstacle = true;
             } else {
-                boundary.cellType(i, j) = isFluid;
+                domain(i, j).obstacle = false;
             }
         }
     }
@@ -57,75 +54,71 @@ void set_constant_flags(Boundary& boundary, int imax, int jmax) {
     // Set where the water is in the obstacle cells
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
-            if (boundary.cellType(i, j) == isBoundary) {
-                if (i<imax+1 & boundary.cellType(i+1, j) == isFluid){
-                    boundary.ECell(i, j) = 1;
+            if (domain(i, j).obstacle) {
+                if (i<imax+1 & domain(i+1, j).obstacle == false){
+                    domain(i, j).E = true;
                 }
-                if (i>0 & boundary.cellType(i-1, j) == isFluid){
-                    boundary.WCell(i, j) = 1;
+                if (i>0 & domain(i-1, j).obstacle == false){
+                    domain(i, j).W = true;
                 }
-                if (j<jmax+1 & boundary.cellType(i, j+1) == isFluid){
-                    boundary.NCell(i, j) = 1;
+                if (j<jmax+1 & domain(i, j+1).obstacle == false){
+                    domain(i, j).N = true;
                 }
-                if (j>0 & boundary.cellType(i, j-1) == isFluid){
-                    boundary.SCell(i, j) = 1;
+                if (j>0 & domain(i, j-1).obstacle == false){
+                    domain(i, j).S = true;
                 }
             }
         }
     }
 };
 
-void set_boundary_values(Tensor& U, Tensor& V, const Boundary& boundary, int imax, int jmax){
-    // Currently hard-code up/down left/right
-    const static float isBoundary = 1;
-    const static float isFluid = 0;
-
+void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, int jmax){
 
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
-            if (boundary.cellType(i, j) == isBoundary) {
+            if (domain(i, j).obstacle) {
                 // TODO: check boundary type
                 //       Start with no slip
                 // U
-                if (boundary.WCell(i, j)) {
+                if (domain(i, j).W) {
                     U(i-1, j) = 0;
                 } else {
-                    if (boundary.NCell(i, j)) {
+                    if (domain(i, j).N) {
                         U(i-1, j) = -U(i-1, j+1);
                     }
-                    if (boundary.SCell(i, j)) {
+                    if (domain(i, j).S) {
                         U(i-1, j) = -U(i-1, j-1);
                     }
                 }
-                if (boundary.ECell(i, j)) {
+                if (domain(i, j).E) {
                     U(i, j) = 0;
                 } else {
-                    if (boundary.NCell(i, j)) {
+                    if (domain(i, j).N) {
                         U(i, j) = -U(i, j+1);
                     }
-                    if (boundary.SCell(i, j)) {
+                    if (domain(i, j).S) {
                         U(i, j) = -U(i, j-1);
                     }
                 }
 
                 // V
-                if (boundary.NCell(i, j)) {
+                if (domain(i, j).N) {
                     V(i, j) = 0;
                 } else {
-                    if (boundary.WCell(i, j)) {
+                    if (domain(i, j).W) {
                         V(i, j) = -V(i-1, j);
                     }
-                    if (boundary.ECell(i, j)) {
+                    if (domain(i, j).E) {
                         V(i, j) = -V(i+1, j);
                     }
                 }
-                if (boundary.SCell(i, j)) {
+                if (domain(i, j).S) {
                     V(i, j-1) = 0;
                 } else {
-                    if (boundary.WCell(i, j)) {
+                    if (domain(i, j).W) {
                         V(i, j-1) = -V(i-1, j-1);
                     }
-                    if (boundary.ECell(i, j)) {
+                    if (domain(i, j).E) {
                         V(i, j-1) = -V(i+1, j-1);
                     }
                 }
@@ -157,13 +150,9 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
     }
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Boundary& boundary, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax) {
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
-
-    const static float isBoundary = 1.0f;
-    const static float isFluid = 0.0f;
-
     const static float Reinv = 1.0f/Re;
 
     const static float dxinv = 1.0f/dx;
@@ -214,7 +203,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Bo
 
     for (int i=0; i!=imax+2; ++i) {
         for (int j=0; j!=jmax+2; ++j) {
-            if (boundary.cellType(i, j) == isFluid) {
+            if (domain(i, j).obstacle == false) {
                 uimj = U(i-1, j);
                 uimjp= U(i-1, j+1);
                 uijm = U(i,   j-1);
@@ -229,7 +218,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Bo
                 vipjm= V(i+1, j-1);
                 vipj = V(i+1, j);
 
-                if (i<imax+1 & boundary.cellType(i+1, j) == isFluid)
+                if (i<imax+1 & domain(i+1, j).obstacle == false)
                 {
                     dudxdx = (uipj - 2*uij + uimj) * dxinv2;
                     dudydy = (uijp - 2*uij + uijm) * dyinv2;
@@ -253,7 +242,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Bo
                     F(i, j) = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy + gx);
                 }
 
-                if (j<jmax+1 & boundary.cellType(i, j+1)==isFluid)
+                if (j<jmax+1 & domain(i, j+1).obstacle == false)
                 {
                     dvdxdx = (vipj - 2*vij + vimj) * dxinv2;
                     dvdydy = (vijp - 2*vij + vijm) * dyinv2;
@@ -278,21 +267,21 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Bo
 
                 }
             } else {
-                if (boundary.NCell(i, j))
+                if (domain(i, j).N)
                     G(i, j) = V(i, j);
-                else if (boundary.SCell(i, j))
+                else if (domain(i, j).S)
                     G(i, j-1) = V(i, j-1);
 
-                if (boundary.WCell(i, j))
+                if (domain(i, j).W)
                     F(i-1, j) = U(i-1, j);
-                else if (boundary.ECell(i, j))
+                else if (domain(i, j).E)
                     F(i, j) = U(i, j);
             }
         }
     }
 };
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Boundary& boundary, float dx, float dy, float dt, int imax, int jmax) {
+void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dx, float dy, float dt, int imax, int jmax) {
     const static float dxinv = 1.0f/dx;
     const static float dyinv = 1.0f/dy;
 
@@ -303,12 +292,9 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const B
     float gij;
     float gijm;
 
-    const static float isBoundary = 1.0f;
-    const static float isFluid = 0.0f;
-
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
-            if (boundary.cellType(i, j)==isFluid) {
+            if (domain(i, j).obstacle==false) {
                 fimj = F(i-1, j);
                 fij  = F(i, j);
                 gijm = G(i, j-1);
@@ -319,7 +305,7 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const B
     }
 };
 
-void SOR(Tensor& P, const Tensor& RHS, const Boundary& boundary, float& rit, float omega, float dx, float dy, int imax, int jmax) {
+void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, float omega, float dx, float dy, int imax, int jmax) {
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
     const static float dxinv2 = dxinv * dxinv;
@@ -339,22 +325,22 @@ void SOR(Tensor& P, const Tensor& RHS, const Boundary& boundary, float& rit, flo
     // Set pressure boundary conditions
     for (int i=0; i!=imax+2; ++i) {
         for (int j=0; j!=jmax+2; ++j) {
-            if (boundary.cellType(i, j)==isBoundary) {
+            if (domain(i, j).obstacle) {
                 tmp_p = 0.0f;
                 edges = 0;
-                if (boundary.NCell(i, j)) {
+                if (domain(i, j).N) {
                     tmp_p += P(i, j+1);
                     ++edges;
                 }
-                if (boundary.SCell(i, j)) {
+                if (domain(i, j).S) {
                     tmp_p += P(i, j-1);
                     ++edges;
                 }
-                if (boundary.ECell(i, j)) {
+                if (domain(i, j).E) {
                     tmp_p += P(i+1, j);
                     ++edges;
                 }
-                if (boundary.WCell(i, j)) {
+                if (domain(i, j).W) {
                     tmp_p += P(i-1, j);
                     ++edges;
                 }
@@ -366,7 +352,7 @@ void SOR(Tensor& P, const Tensor& RHS, const Boundary& boundary, float& rit, flo
 
     for (int i=1; i!=imax+1; ++i) {
         for (int j=1; j!=jmax+1; ++j) {
-            if (boundary.cellType(i, j) == isFluid) {
+            if (domain(i, j).obstacle == false) {
                 P(i, j) = (1.0f - omega) * P(i, j)                  \
                     + coeff                                             \
                     * ( dxinv2 * ( P(i+1, j) + P(i-1, j) )          \
@@ -379,7 +365,7 @@ void SOR(Tensor& P, const Tensor& RHS, const Boundary& boundary, float& rit, flo
 
     for (int i=1; i!=imax+1; ++i) {
         for (int j=1; j!=jmax+1; ++j) {
-            if (boundary.cellType(i, j) == isFluid) {
+            if (domain(i, j).obstacle == false) {
                 rit_tmp = dxinv2 * ( P(i-1, j) - 2.0f * P(i, j) + P(i+1, j) ) \
                         + dyinv2 * ( P(i, j-1) - 2.0f * P(i, j) + P(i, j+1) ) \
                         - RHS(i, j);
@@ -389,12 +375,9 @@ void SOR(Tensor& P, const Tensor& RHS, const Boundary& boundary, float& rit, flo
     }
 };
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Boundary& boundary, float dx, float dy, float dt, int imax, int jmax) {
+void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Domain& domain, float dx, float dy, float dt, int imax, int jmax) {
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
-
-    const static float isBoundary = 1.0f;
-    const static float isFluid = 0.0f;
 
     float dtdx = dt * dxinv;
     float dtdy = dt * dyinv;
@@ -409,9 +392,9 @@ void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Te
             pijp = P(i, j+1);
             pipj = P(i+1, j);
 
-            if ( (boundary.cellType(i, j)==isFluid) && boundary.cellType(i+1, j)==isFluid )
+            if ( (domain(i, j).obstacle==false) && domain(i+1, j).obstacle==false )
                 U(i, j) = F(i, j) - dtdx * (pipj - pij);
-            if ( (boundary.cellType(i, j)==isFluid) && boundary.cellType(i, j+1)==isFluid )
+            if ( (domain(i, j).obstacle==false) && domain(i, j+1).obstacle==false )
                 V(i, j) = G(i, j) - dtdy * (pijp - pij);
         }
     }

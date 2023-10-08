@@ -79,19 +79,8 @@ int main() {
 
     Domain domain({p.imax+2, p.jmax+2}, Cell());
 
-    // TODO
-    Boundary boundary = {
-        Tensor({p.imax+2, p.jmax+2}, 0.0f),         // cellType: 0 -> fluid
-        Tensor({p.imax+2, p.jmax+2}, 0.0f),
-        Tensor({p.imax+2, p.jmax+2}, 0.0f),
-        Tensor({p.imax+2, p.jmax+2}, 0.0f),
-        Tensor({p.imax+2, p.jmax+2}, 0.0f),
-        Tensor({p.imax+2, p.jmax+2}, 0.0f),
-        Tensor({p.imax+2, p.jmax+2}, 0.0f),
-    };
-
     // Set flags for edges and obstacle     (because obstacles don't move)
-    set_constant_flags(boundary, p.imax, p.jmax);
+    set_constant_flags(domain, p.imax, p.jmax);
 
     quads[0].tensor = &U;
     quads[1].tensor = &V;
@@ -120,20 +109,20 @@ int main() {
 
         //------------------------------
         //  PHYSICS
-        set_boundary_values(U, V, boundary, p.imax, p.jmax);
+        set_boundary_values(U, V, domain, p.imax, p.jmax);
         set_specific_boundary_values(U, V, p.imax, p.jmax);
         dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt_max, p.imax, p.jmax);
-        compute_FG(F, G, U, V, boundary, dt, p.Re, p.dx, p.dy, p.gamma, p.imax, p.jmax);        // add p.gx, p.gy
-        compute_rhs_pressure(RHS, F, G, boundary, p.dx, p.dy, dt, p.imax, p.jmax);
+        compute_FG(F, G, U, V, domain, dt, p.Re, p.dx, p.dy, p.gamma, p.imax, p.jmax);        // add p.gx, p.gy
+        compute_rhs_pressure(RHS, F, G, domain, p.dx, p.dy, dt, p.imax, p.jmax);
 
         int it = 0;
         float rit = 0;
         do {
             ++it;
-            SOR(P, RHS, boundary, rit, p.omega, p.dx, p.dy, p.imax, p.jmax);
+            SOR(P, RHS, domain, rit, p.omega, p.dx, p.dy, p.imax, p.jmax);
         } while (it < p.it_max && rit > p.eps);
 
-        compute_uv(U, V, F, G, P, boundary, p.dx, p.dy, dt, p.imax, p.jmax);
+        compute_uv(U, V, F, G, P, domain, p.dx, p.dy, dt, p.imax, p.jmax);
 
         simulated_t += dt;
         n++;
