@@ -150,7 +150,7 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
     }
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax) {
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax, float gx, float gy) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
     const static float Reinv = 1.0f/Re;
@@ -166,9 +166,6 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
 
     const static float dyinv4 = dyinv * 0.25f;
     const static float gammadyinv4 = gamma * dyinv4;
-
-    // TODO
-    const static float gx = 0.0f, gy = 0.0f;
 
     // F
     float dudxdx;

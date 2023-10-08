@@ -10,7 +10,7 @@ void set_boundary_values(Tensor& U, Tensor& V, const Domain&, int imax, int jmax
 
 void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax);
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain&, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax);
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain&, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax, float gx, float gy);
 
 void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain&, float dx, float dy, float dt, int imax, int jmax);
 

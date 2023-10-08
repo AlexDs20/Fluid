@@ -73,10 +73,9 @@ int main() {
     Tensor U({p.imax+2, p.jmax+2}, p.u0);
     Tensor V({p.imax+2, p.jmax+2}, p.v0);
     Tensor P({p.imax+2, p.jmax+2}, p.p0);
-    Tensor F({p.imax+2, p.jmax+2}, p.u0);
-    Tensor G({p.imax+2, p.jmax+2}, p.v0);
+    Tensor F({p.imax+2, p.jmax+2}, 0.0f);
+    Tensor G({p.imax+2, p.jmax+2}, 0.0f);
     Tensor RHS({p.imax+2, p.jmax+2}, 0.0f);
-
     Domain domain({p.imax+2, p.jmax+2}, Cell());
 
     // Set flags for edges and obstacle     (because obstacles don't move)
@@ -112,7 +111,7 @@ int main() {
         set_boundary_values(U, V, domain, p.imax, p.jmax);
         set_specific_boundary_values(U, V, p.imax, p.jmax);
         dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt_max, p.imax, p.jmax);
-        compute_FG(F, G, U, V, domain, dt, p.Re, p.dx, p.dy, p.gamma, p.imax, p.jmax);        // add p.gx, p.gy
+        compute_FG(F, G, U, V, domain, dt, p.Re, p.dx, p.dy, p.gamma, p.imax, p.jmax, p.gx, p.gy);
         compute_rhs_pressure(RHS, F, G, domain, p.dx, p.dy, dt, p.imax, p.jmax);
 
         int it = 0;

@@ -6,7 +6,7 @@ struct Parameters {
     const float u0 = 0.0f;
     const float v0 = 0.0f;
     const float p0 = 0.0f;
-    const float gx = 0.0;       // not currently used
+    const float gx = 0.0;
     const float gy = 0.0;
 
     // time
