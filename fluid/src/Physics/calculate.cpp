@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cmath>
+#include <omp.h>
 #include "Physics/calculate.hpp"
+#include "utils.hpp"
 
 
 float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float dy, float Re, float tau, float dt, int imax, int jmax) {
@@ -8,17 +10,23 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float
     const static float dyinv2 = 1.0f / (dy*dy);
     const static float Re_dt = 0.5f * Re / (dxinv2 + dyinv2);
 
-    if ( (tau <= 0) | (tau > 1) ) {
+    if ( (tau <= 0) || (tau > 1) ) {
         return dt;
     }
 
     float absumax=0, absvmax=0;
+#ifdef _OMP
+#pragma omp parallel for reduction(max: absumax, absvmax) default(none) shared(imax, jmax, U, V, std::cout)
+#endif
     for (int i=0; i<imax+2; ++i){
         for (int j=0; j<jmax+2; ++j) {
             absumax = std::max(absumax, std::fabs(U(i, j)));
             absvmax = std::max(absvmax, std::fabs(V(i, j)));
         }
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 
     const float dt_v_max = std::min(dx / absumax, dy / absvmax);
 
@@ -34,8 +42,11 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
     // Sphere info
     const int px = (imax+2) / 5;
     const int py = (jmax+2) / 2;
-    const float radius = std::min(imax, jmax) / 10;
+    const float radius = std::min(imax, jmax) / 10.0;
 
+#ifdef _OMP
+#pragma omp parallel for default(none) shared(domain, imax, jmax, px, py, radius)
+#endif
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
             // Above and Below
@@ -50,8 +61,14 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
             }
         }
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 
     // Set where the water is in the obstacle cells
+#ifdef _OMP
+#pragma omp parallel for default(none) shared(domain, imax, jmax)
+#endif
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
             if (domain(i, j).obstacle) {
@@ -70,10 +87,15 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
             }
         }
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 };
 
-void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, int jmax){
-
+void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, int jmax) {
+#ifdef _OMP
+#pragma omp parallel for default(none) shared(domain, imax, jmax, U, V)
+#endif
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
             if (domain(i, j).obstacle) {
@@ -125,14 +147,25 @@ void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, i
             }
         }
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 };
 
 void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
+    //#ifdef _OMP
     // Outflow
+    //#endif
+#ifdef _OMP
+#pragma omp parallel for
+#endif
     for (int j=1; j!=jmax+1; ++j) {
         U(imax, j) = U(imax-1, j);
         V(imax+1, j) = V(imax, j);
     }
+#ifdef _OMP
+#pragma omp parallel for
+#endif
     for (int i=1; i!=imax+1; ++i) {
         U(i, jmax+1) = U(i, jmax);
         V(i, jmax) = V(i, jmax-1);
@@ -140,14 +173,23 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
         V(i, 0) = V(i, 1);
         U(i, 0) = U(i, 1);
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 
     // Left: input flow
     const float u = 0.8;
     const int width = 5;
+#ifdef _OMP
+#pragma omp parallel for
+#endif
     for (int j=(jmax+1)/2-width/2; j!=(jmax+1)/2+width/2+1;++j)
     {
         U(0, j) = u;
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 };
 
 void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax, float gx, float gy) {
@@ -198,6 +240,11 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
     float one, two, three, four, five, six;
 
 
+#ifdef _OMP
+#pragma omp parallel for default(none)          \
+private(dudxdx, dudydy, duudx, duvdy, dvdxdx, dvdydy, duvdx, dvvdy, uijm, uij, uijp, uimj, uimjp, uipj, vijm, vij, vijp, vimj, vipjm, vipj, one, two, three, four, five, six)                         \
+shared(F, G, U, V, imax, jmax, domain, dxinv2, dyinv2, dxinv4, dyinv4, gammadxinv4, gammadyinv4, dt, Reinv, gx, gy)
+#endif
     for (int i=0; i!=imax+2; ++i) {
         for (int j=0; j!=jmax+2; ++j) {
             if (domain(i, j).obstacle == false) {
@@ -276,6 +323,9 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
             }
         }
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 };
 
 void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dx, float dy, float dt, int imax, int jmax) {
@@ -289,6 +339,9 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const D
     float gij;
     float gijm;
 
+#ifdef _OMP
+#pragma omp parallel for default(none) private(fij, fimj, gij, gijm) shared(RHS, F, G, domain, imax, jmax, dxinv, dyinv, dtinv)
+#endif
     for (int i=0; i<imax+2; ++i) {
         for (int j=0; j<jmax+2; ++j) {
             if (domain(i, j).obstacle==false) {
@@ -300,6 +353,9 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const D
             }
         }
     }
+#ifdef _OMP
+#pragma omp barrier
+#endif
 };
 
 void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, float omega, float dx, float dy, int imax, int jmax) {
@@ -316,10 +372,11 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, float o
 
     float tmp_p;
     int edges;
-    const static float isBoundary = 1.0f;
-    const static float isFluid = 0.0f;
 
     // Set pressure boundary conditions
+#ifdef _OMP
+#pragma omp parallel for private(tmp_p, edges)
+#endif
     for (int i=0; i!=imax+2; ++i) {
         for (int j=0; j!=jmax+2; ++j) {
             if (domain(i, j).obstacle) {
@@ -347,19 +404,24 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, float o
     }
 
 
+    // Update pressure
     for (int i=1; i!=imax+1; ++i) {
         for (int j=1; j!=jmax+1; ++j) {
             if (domain(i, j).obstacle == false) {
-                P(i, j) = (1.0f - omega) * P(i, j)                  \
-                    + coeff                                             \
-                    * ( dxinv2 * ( P(i+1, j) + P(i-1, j) )          \
-                      + dyinv2 * ( P(i, j+1) + P(i, j-1) )          \
+                P(i, j) = (1.0f - omega) * P(i, j)                    \
+                    + coeff                                           \
+                    * ( dxinv2 * ( P(i+1, j) + P(i-1, j) )            \
+                      + dyinv2 * ( P(i, j+1) + P(i, j-1) )            \
                       - RHS(i, j)                                     \
                       );
             }
         }
     }
 
+    // Compute residual
+#ifdef _OMP
+#pragma omp parallel for reduction(max: rit) shared(imax, jmax, P) private(rit_tmp)
+#endif
     for (int i=1; i!=imax+1; ++i) {
         for (int j=1; j!=jmax+1; ++j) {
             if (domain(i, j).obstacle == false) {
@@ -383,6 +445,9 @@ void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Te
     float pij;
     float pijp;
 
+#ifdef _OMP
+#pragma omp parallel for private(pij, pijp, pipj)
+#endif
     for (int i=1; i!=imax+1; ++i) {
         for (int j=1; j!=jmax+1; ++j) {
             pij  = P(i, j);

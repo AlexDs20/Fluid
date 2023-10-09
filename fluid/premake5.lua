@@ -4,7 +4,7 @@ workspace "Fluid Simulation"
     architecture "x86_64"
     toolset "clang"
 
-    configurations { "debug", "release" }
+    configurations { "debug", "release", "dev" }
 
     filter { "configurations:debug" }
         symbols "On"
@@ -12,19 +12,15 @@ workspace "Fluid Simulation"
     filter { "configurations:release" }
         optimize "On"
 
-    filter "system:linux"
-        links{ "dl", "pthread"}
+    filter { "configurations:dev" }
+        optimize "On"
+        defines{ "_OMP" }
+        links{ "omp" }
 
+    filter "system:linux"
         defines{ "_X11" }
 
-    filter "system:windows"
-        defines { "_WINDOWS" }
-
-    filter "system:MAC"
-        defines { "_MAC" }
-
     filter { }
-    flags { "ProfileGC", "ShowGC" }
 
     targetdir ("build/bin/%{prj.name}/%{cfg.longname}")
     objdir ("build/obj/%{prj.name}/%{cfg.longname}")
@@ -37,6 +33,7 @@ include "deps/stb.lua"
 
 project "Fluid"
     kind "WindowedApp"
+    openmp "On"
 
     includedirs
     {
@@ -53,4 +50,3 @@ project "Fluid"
     }
 
     links { "GLAD", "GLFW", "STB", "GLM" }
-
