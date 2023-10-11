@@ -6,13 +6,16 @@
 #include <string>
 #include <math.h>
 
+#include "Message/Message.hpp"
+#include "Physics/Physics.hpp"
+#include "Renderer/Renderer.hpp"
+
 #include "Renderer/setupGL.hpp"
 #include "Renderer/utils.hpp"
 #include "Renderer/object.hpp"
 #include "Renderer/shader.hpp"
 #include "Renderer/camera.hpp"
 #include "Renderer/texture.hpp"
-#include "Renderer/Renderer.hpp"
 
 #include "Math/tensor.hpp"
 #include "Physics/calculate.hpp"
@@ -34,10 +37,15 @@ float lastFrame = 0.0f;
 
 
 int main() {
+    MessageBus messageBus;
+    Physics physics(&messageBus);
+    Renderer renderer;
+    messageBus.add_receiver(physics.read_message);
+
+
     //--------------------
     //  RENDERER
     //--------------------
-    Renderer renderer;
     GLFWwindow* window = renderer.window;
 
     Shader shader( \
@@ -65,25 +73,12 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
 
-    //--------------------
-    //  PHYSICS
-    //--------------------
+
+    Fluid fluid;
     Parameters p;
-    // Initialize the fields
-    Tensor U({p.imax+2, p.jmax+2}, p.u0);
-    Tensor V({p.imax+2, p.jmax+2}, p.v0);
-    Tensor P({p.imax+2, p.jmax+2}, p.p0);
-    Tensor F({p.imax+2, p.jmax+2}, 0.0f);
-    Tensor G({p.imax+2, p.jmax+2}, 0.0f);
-    Tensor RHS({p.imax+2, p.jmax+2}, 0.0f);
-    Domain domain({p.imax+2, p.jmax+2}, Cell());
-
-    // Set flags for edges and obstacle     (because obstacles don't move)
-    set_constant_flags(domain, p.imax, p.jmax);
-
-    quads[0].tensor = &U;
-    quads[1].tensor = &V;
-    quads[2].tensor = &P;
+    quads[0].tensor = fluid.U;
+    quads[1].tensor = fluid.V;
+    quads[2].tensor = fluid.P;
 
     float dt;
     int n = 0;
@@ -106,26 +101,7 @@ int main() {
         shader.setMat4f("view", view);
         shader.setMat4f("model", model);
 
-        //------------------------------
-        //  PHYSICS
-        set_boundary_values(U, V, domain, p.imax, p.jmax);
-        set_specific_boundary_values(U, V, p.imax, p.jmax);
-        dt = adaptive_time_step_size(U, V, p.dx, p.dy, p.Re, p.tau, p.dt_max, p.imax, p.jmax);
-        compute_FG(F, G, U, V, domain, dt, p.Re, p.dx, p.dy, p.gamma, p.imax, p.jmax, p.gx, p.gy);
-        compute_rhs_pressure(RHS, F, G, domain, p.dx, p.dy, dt, p.imax, p.jmax);
-
-        int it = 0;
-        float rit = 0;
-        do {
-            ++it;
-            SOR(P, RHS, domain, rit, p.omega, p.dx, p.dy, p.imax, p.jmax);
-        } while (it < p.it_max && rit > p.eps);
-
-        compute_uv(U, V, F, G, P, domain, p.dx, p.dy, dt, p.imax, p.jmax);
-
-        simulated_t += dt;
-        n++;
-        //------------------------------
+        fluid.update();
 
         //------------------------------
         //  RENDERER
@@ -157,4 +133,3 @@ int main() {
 
     return 0;
 }
-

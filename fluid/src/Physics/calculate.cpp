@@ -2,7 +2,6 @@
 #include <cmath>
 #include <omp.h>
 #include "Physics/calculate.hpp"
-#include "utils.hpp"
 
 
 float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float dy, float Re, float tau, float dt, int imax, int jmax) {

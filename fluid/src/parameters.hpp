@@ -17,8 +17,8 @@ struct Parameters {
     // grid
     const float length_x = 2.0f;
     const float length_y = 1.0f;
-    const int imax = 150;
-    const int jmax = 75;
+    const int imax = 130;
+    const int jmax = 65;
     const float dx = length_x / (float)imax;
     const float dy = length_y / (float)jmax;
 
