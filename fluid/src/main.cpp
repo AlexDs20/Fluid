@@ -28,7 +28,7 @@
 
 unsigned int w = 1920;
 unsigned int h = 1080;
-Camera camera(glm::vec3(0.0f,-1.5f, 7.0f));
+Camera camera(glm::vec3(0.0f,0.0f, 5.0f));
 float lastX = w / 2.0f;
 float lastY = h / 2.0f;
 bool firstMouse = true;
@@ -69,9 +69,8 @@ int main() {
 
     bool running = true;
     while (running) {
-        // running = !glfwWindowShouldClose(window);
-        // float currentFrame = glfwGetTime();
-        float currentFrame = 0;
+        running = !glfwWindowShouldClose(window);
+        float currentFrame = glfwGetTime();
 
         processInput(window);
 
@@ -80,7 +79,7 @@ int main() {
         //------------------------------
         //  RENDERER
         running = renderer.update(quads, q);
-        // glfwPollEvents();
+        glfwPollEvents();
 
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;

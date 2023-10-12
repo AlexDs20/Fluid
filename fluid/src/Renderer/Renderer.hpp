@@ -18,8 +18,8 @@ extern Camera camera;
 class Renderer {
 public:
     std::string windowTitle = "Simulation";
-    unsigned int w = 1920;
-    unsigned int h = 1080;
+    unsigned int w = 1024;
+    unsigned int h = 768;
 
     GLFWwindow* window;
 
@@ -32,11 +32,12 @@ public:
 
         shader.use();
         shader.setInt("texture1", 0);
-
+        texture = new Texture();
         glEnable(GL_DEPTH_TEST);
     }
     ~Renderer() {
         glfwDestroyWindow(window);
+        delete texture;
     };
 
     bool update(std::vector<Placement> quads, Quad q) {
@@ -53,7 +54,7 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         for (std::vector<Placement>::size_type i=0; i!=quads.size(); ++i) {
-            // texture->load_texture(quads[i].tensor->data(), p.imax+2, p.jmax+2, 1);
+            texture->load_texture(quads[i].tensor->data(), p.imax+2, p.jmax+2, 1);
             model = glm::mat4(1.0f);
             model = glm::scale(model, glm::vec3(quads[i].scale, 1.0f));
             model = glm::translate(model, quads[i].position);
