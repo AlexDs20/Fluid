@@ -25,21 +25,22 @@ public:
 
     Renderer() {
         window = initialize_context();
-        shader = Shader( \
-            "resources/shader/vertex.vs", \
-            "resources/shader/fragment.fs" \
+        shader = new Shader(                    \
+            "resources/shader/vertex.vs",   \
+            "resources/shader/fragment.fs"  \
             );
 
         texture = new Texture();
         q = new Quad();
-        shader.use();
-        shader.setInt("texture1", 0);
+        shader->use();
+        shader->setInt("texture1", 0);
         texture->use();
         glEnable(GL_DEPTH_TEST);
     }
     ~Renderer() {
         glfwDestroyWindow(window);
         delete texture;
+        delete shader;
         delete q;
     };
 
@@ -49,9 +50,9 @@ public:
         glm::mat4 view = camera.GetViewMatrix();
         glm::mat4 model = glm::mat4(1.0f);
 
-        shader.setMat4f("proj", proj);
-        shader.setMat4f("view", view);
-        shader.setMat4f("model", model);
+        shader->setMat4f("proj", proj);
+        shader->setMat4f("view", view);
+        shader->setMat4f("model", model);
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -60,7 +61,7 @@ public:
             model = glm::mat4(1.0f);
             model = glm::scale(model, glm::vec3(quads[i].scale, 1.0f));
             model = glm::translate(model, quads[i].position);
-            shader.setMat4f("model", model);
+            shader->setMat4f("model", model);
             q->Draw();
         }
         glfwSwapBuffers(window);
@@ -68,11 +69,10 @@ public:
     };
 
 private:
-    Shader shader;
+    Shader *shader;
     Texture *texture;
     Parameters p;
     Quad *q;
-
 
     GLFWwindow* initialize_context() {
         glfwInit();

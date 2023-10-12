@@ -52,11 +52,7 @@ int main() {
     float size_y = 1.0f;
     float space = 0.25f;
     quads.push_back(Placement({xl,ys - 0*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xr,ys - 0*(size_y + space), -1.0f}, {2.0f, 1.0f}));
-    // quads.push_back(Placement({xl,ys - 1*(size_y + space), -1.0f}, {2.0f, 1.0f}));
     quads[0].tensor = fluid.U;
-    // quads[1].tensor = fluid.V;
-    // quads[2].tensor = fluid.P;
 
     //--------------------
     //  Renderer
