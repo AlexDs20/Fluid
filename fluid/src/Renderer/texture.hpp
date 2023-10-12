@@ -1,4 +1,5 @@
 #pragma once
+#include <glad/glad.h>
 #include <string>
 #include <vector>
 
@@ -13,5 +14,5 @@ class Texture {
         void initialize();
         void read_texture_file(std::string texture);
         int width, height, channels;
-        unsigned int textureID;
+        GLuint textureID;
 };

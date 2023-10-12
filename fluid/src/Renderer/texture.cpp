@@ -1,6 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include <glad/glad.h>
+// #include <glad/glad.h>
 #include <string>
 #include <iostream>
 
@@ -27,6 +27,9 @@ void Texture::load_texture(const std::vector<float>& data, int width, int height
 void Texture::use() const {
     // TODO: This TEXTURE0 should be more flexible
     glActiveTexture(GL_TEXTURE0);
+    std::cout << 1 << std::endl;
+    std::cout << textureID << std::endl;
+    std::cout << 3 << std::endl;
     glBindTexture(GL_TEXTURE_2D, textureID);
 }
 

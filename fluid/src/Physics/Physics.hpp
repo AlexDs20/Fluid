@@ -34,22 +34,23 @@ public:
     void update(){
         set_boundary_values(*U, *V, *domain, p.imax, p.jmax);
         set_specific_boundary_values(*U, *V, p.imax, p.jmax);
-        float dt = adaptive_time_step_size(*U, *V, p.dx, p.dy, p.Re, p.tau, p.dt_max, p.imax, p.jmax);
-        compute_FG(*F, *G, *U, *V, *domain, dt, p.Re, p.dx, p.dy, p.gamma, p.imax, p.jmax, p.gx, p.gy);
-        compute_rhs_pressure(*RHS, *F, *G, *domain, p.dx, p.dy, dt, p.imax, p.jmax);
+        float dt = adaptive_time_step_size(*U, *V, p.dt_max, p);
+        compute_FG(*F, *G, *U, *V, *domain, dt, p);
+        compute_rhs_pressure(*RHS, *F, *G, *domain, dt, p);
 
+        int it_max = 20;
         int it = 0;
         float rit = 0;
         do {
             ++it;
-            SOR(*P, *RHS, *domain, rit, p.omega, p.dx, p.dy, p.imax, p.jmax);
-        } while (it < p.it_max && rit > p.eps);
+            SOR(*P, *RHS, *domain, rit, p);
+        } while (it < it_max && rit > p.eps);
 
-        compute_uv(*U, *V, *F, *G, *P, *domain, p.dx, p.dy, dt, p.imax, p.jmax);
+        compute_uv(*U, *V, *F, *G, *P, *domain, dt, p);
     };
 
 public:
-    Parameters p;
+    __attribute__ ((aligned(64))) Parameters p;
     Tensor *U;
     Tensor *V;
     Tensor *P;

@@ -2,9 +2,16 @@
 #include <cmath>
 #include <omp.h>
 #include "Physics/calculate.hpp"
+#include "parameters.hpp"
 
 
-float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dx, float dy, float Re, float tau, float dt, int imax, int jmax) {
+float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const Parameters& p) {
+    float dx = p.dx;
+    float dy = p.dy;
+    float Re = p.Re;
+    float tau = p.tau;
+    int imax = p.imax;
+    int jmax = p.jmax;
     const static float dxinv2 = 1.0f / (dx*dx);
     const static float dyinv2 = 1.0f / (dy*dy);
     const static float Re_dt = 0.5f * Re / (dxinv2 + dyinv2);
@@ -182,7 +189,7 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
 #ifdef _OMP
 #pragma omp parallel for
 #endif
-    for (int j=(jmax+1)/2-width/2; j!=(jmax+1)/2+width/2+1;++j)
+    for (int j=(jmax-width)/2; j!=(jmax+width)/2;++j)
     {
         U(0, j) = u;
     }
@@ -191,9 +198,17 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
 #endif
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float Re, float dx, float dy, float gamma, int imax, int jmax, float gx, float gy) {
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, const Parameters& p) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
+    float Re = p.Re;
+    float dx = p.dx;
+    float dy = p.dy;
+    float gamma = p.gamma;
+    int imax = p.imax;
+    int jmax = p.jmax;
+    float gx = p.gx;
+    float gy = p.gy;
     const static float Reinv = 1.0f/Re;
 
     const static float dxinv = 1.0f/dx;
@@ -327,7 +342,11 @@ shared(F, G, U, V, imax, jmax, domain, dxinv2, dyinv2, dxinv4, dyinv4, gammadxin
 #endif
 };
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dx, float dy, float dt, int imax, int jmax) {
+void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dt, const Parameters& p) {
+    float dx = p.dx;
+    float dy = p.dy;
+    int imax = p.imax;
+    int jmax = p.jmax;
     const static float dxinv = 1.0f/dx;
     const static float dyinv = 1.0f/dy;
 
@@ -357,7 +376,12 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const D
 #endif
 };
 
-void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, float omega, float dx, float dy, int imax, int jmax) {
+void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const Parameters& p) {
+    float omega = p.omega;
+    float dx = p.dx;
+    float dy = p.dy;
+    int imax = p.imax;
+    int jmax = p.jmax;
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
     const static float dxinv2 = dxinv * dxinv;
@@ -433,7 +457,11 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, float o
     }
 };
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Domain& domain, float dx, float dy, float dt, int imax, int jmax) {
+void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Domain& domain, float dt, const Parameters& p) {
+    float dx = p.dx;
+    float dy = p.dy;
+    int imax = p.imax;
+    int jmax = p.jmax;
     const static float dxinv = 1.0f / dx;
     const static float dyinv = 1.0f / dy;
 

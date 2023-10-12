@@ -47,6 +47,7 @@ project "Fluid"
         "src/Math/**",
         "src/Physics/**",
         "src/Renderer/**",
+        "src/Message/**",
     }
 
     links { "GLAD", "GLFW", "STB", "GLM" }

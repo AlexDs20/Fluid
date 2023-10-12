@@ -1,5 +1,4 @@
 #pragma once
-
 #include <vector>
 #include <glm/glm.hpp>
 #include "Math/tensor.hpp"

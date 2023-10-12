@@ -15,15 +15,15 @@ struct Parameters {
     const float tau = 0.3;
 
     // grid
-    const float length_x = 2.0f;
-    const float length_y = 1.0f;
-    const int imax = 130;
-    const int jmax = 65;
-    const float dx = length_x / (float)imax;
-    const float dy = length_y / (float)jmax;
+    // const float length_x = 2.0f;
+    // const float length_y = 1.0f;
+    const int imax = 300;
+    const int jmax = 150;
+    const float dx = 2.0 / (float)imax;
+    const float dy = 1.0 / (float)jmax;
 
     // pressure
-    const int it_max = 20;
+    // const int it_max = 20;
     const float eps = 0.001f;
     const float omega = 1.5;
 
