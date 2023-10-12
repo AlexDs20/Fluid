@@ -1,14 +1,6 @@
 #include <glad/glad.h>
 #include "Renderer/object.hpp"
 
-glm::vec3 Quad::scale() const {
-    return glm::vec3(m_scale, 1.0f);
-};
-
-glm::vec3 Quad::position() const {
-    return m_position;
-};
-
 void Quad::Draw() const {
     glBindVertexArray(m_VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -19,8 +11,7 @@ Quad::Quad() {
 };
 
 Quad::~Quad() {
-    glDeleteVertexArrays(1, &m_VAO);
-    glDeleteBuffers(1, &m_VBO);
+    glDeleteVertexArrays(1, &m_VAO); glDeleteBuffers(1, &m_VBO);
     glDeleteBuffers(1, &m_EBO);
 };
 

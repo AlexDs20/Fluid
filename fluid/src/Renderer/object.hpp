@@ -4,7 +4,9 @@
 #include "Math/tensor.hpp"
 
 struct Placement {
-    Placement(glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec2 scale = glm::vec2(1.0f, 1.0f), glm::vec2 orientation = glm::vec2(0.0f, 0.0f)): \
+    Placement(glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), \
+            glm::vec2 scale = glm::vec2(1.0f, 1.0f), \
+            glm::vec2 orientation = glm::vec2(0.0f, 0.0f)): \
         position(pos), scale(scale), orientation(orientation) {};
     glm::vec3 position;
     glm::vec2 scale;
@@ -17,8 +19,6 @@ class Quad {
         Quad();
         ~Quad();
         void Draw() const;
-        glm::vec3 position() const;
-        glm::vec3 scale() const;
 
     private:
         void m_initialize();
@@ -33,9 +33,6 @@ class Quad {
             0, 1, 2,
             2, 3, 0,
         };
-        glm::vec3 m_position;
-        glm::vec2 m_scale;
-        glm::vec3 m_orientation;
 
         unsigned int m_VBO, m_EBO, m_VAO;
 };

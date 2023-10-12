@@ -30,18 +30,20 @@ public:
             "resources/shader/fragment.fs" \
             );
 
+        texture = new Texture();
+        q = new Quad();
         shader.use();
         shader.setInt("texture1", 0);
-        texture = new Texture();
+        texture->use();
         glEnable(GL_DEPTH_TEST);
     }
     ~Renderer() {
         glfwDestroyWindow(window);
         delete texture;
+        delete q;
     };
 
-    bool update(std::vector<Placement> quads, Quad q) {
-        texture->use();
+    bool update(const std::vector<Placement>& quads) {
         bool running = !glfwWindowShouldClose(window);
         glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 180.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -59,7 +61,7 @@ public:
             model = glm::scale(model, glm::vec3(quads[i].scale, 1.0f));
             model = glm::translate(model, quads[i].position);
             shader.setMat4f("model", model);
-            q.Draw();
+            q->Draw();
         }
         glfwSwapBuffers(window);
         return running;
@@ -69,6 +71,8 @@ private:
     Shader shader;
     Texture *texture;
     Parameters p;
+    Quad *q;
+
 
     GLFWwindow* initialize_context() {
         glfwInit();
