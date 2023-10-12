@@ -12,10 +12,11 @@
 #include "Renderer/object.hpp"
 #include "parameters.hpp"
 #include "Renderer/camera.hpp"
+#include "Message/Message.hpp"
 
 extern Camera camera;
 
-class Renderer {
+class Renderer: Sender {
 public:
     std::string windowTitle = "Simulation";
     unsigned int w = 1024;
@@ -23,7 +24,7 @@ public:
 
     GLFWwindow* window;
 
-    Renderer() {
+    Renderer(MessageBus *mBus): Sender(mBus) {
         window = initialize_context();
         shader = new Shader(                    \
             "resources/shader/vertex.vs",   \
@@ -31,12 +32,19 @@ public:
             );
 
         texture = new Texture();
-        q = new Quad();
+        texture->use();
+
         shader->use();
         shader->setInt("texture1", 0);
-        texture->use();
+
+        q = new Quad();
+
         glEnable(GL_DEPTH_TEST);
     }
+
+    static void read_message(Message m){
+    };
+
     ~Renderer() {
         glfwDestroyWindow(window);
         delete texture;

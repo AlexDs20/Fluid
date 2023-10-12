@@ -1,29 +1,12 @@
-// #include <glad/glad.h>
-// #include <GLFW/glfw3.h>
-
-#include <glm/ext/matrix_clip_space.hpp>
 #include <iostream>
-#include <string>
-#include <math.h>
+#include <glm/glm.hpp>
 
 #include "Message/Message.hpp"
 #include "Physics/Physics.hpp"
 #include "Renderer/Renderer.hpp"
-
-#include "Renderer/setupGL.hpp"
 #include "Renderer/utils.hpp"
-#include "Renderer/object.hpp"
-#include "Renderer/shader.hpp"
-#include "Renderer/camera.hpp"
-#include "Renderer/texture.hpp"
-
-#include "Math/tensor.hpp"
-#include "Physics/calculate.hpp"
-
-#include "parameters.hpp"
 
 #include <chrono>
-#include <thread>
 
 
 unsigned int w = 1920;
@@ -33,14 +16,15 @@ float lastX = w / 2.0f;
 float lastY = h / 2.0f;
 bool firstMouse = true;
 float deltaTime = 0.0f;
-float lastFrame = 0.0f;
 
 
 int main() {
     MessageBus messageBus;
     Physics physics(&messageBus);
-    Renderer renderer;
+    Renderer renderer(&messageBus);
+
     messageBus.add_receiver(physics.read_message);
+    messageBus.add_receiver(renderer.read_message);
 
     Fluid fluid;
 
@@ -51,32 +35,28 @@ int main() {
     float ys = 0.55f;
     float size_y = 1.0f;
     float space = 0.25f;
+
     quads.push_back(Placement({xl,ys - 0*(size_y + space), -1.0f}, {2.0f, 1.0f}));
     quads[0].tensor = fluid.U;
-
-    //--------------------
-    //  Renderer
-    GLFWwindow* window = renderer.window;
 
     //--------------------
     //  Scene + entity
 
     bool running = true;
     while (running) {
-        running = !glfwWindowShouldClose(window);
-        float currentFrame = glfwGetTime();
+        auto startFrameTime = std::chrono::system_clock::now();
 
-        processInput(window);
+        processInput(renderer.window);
 
         fluid.update();
 
-        //------------------------------
-        //  RENDERER
         running = renderer.update(quads);
         glfwPollEvents();
 
-        deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
+        auto endFrameTime = std::chrono::system_clock::now();
+        auto durationFrame = std::chrono::duration_cast<std::chrono::microseconds>(endFrameTime-startFrameTime).count();
+        std::cout << durationFrame/1000. << " ms\t\r" << std::endl;
+        deltaTime = durationFrame/1000000.;
     };
 
     return 0;
