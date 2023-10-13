@@ -1,5 +1,4 @@
 #include <GLFW/glfw3.h>
-#include <iostream>
 
 #include "Renderer/utils.hpp"
 
@@ -7,7 +6,6 @@ void processInput(GLFWwindow* window)
 {
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.ProcessKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
