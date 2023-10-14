@@ -4,6 +4,11 @@
 #include "Message/Message.hpp"
 #include "Physics/calculate.hpp"
 
+#include "utils.hpp"
+
+#include <cstdlib>
+#include <time.h>
+using namespace std;
 
 class Fluid{
 public:
@@ -31,22 +36,26 @@ public:
     };
 
     // Run simulation until simulated long enough
+    // {
+    //     Timer t(1000);
+    // }
     void update(){
-        set_boundary_values(*U, *V, *domain, p.imax, p.jmax);
-        set_specific_boundary_values(*U, *V, p.imax, p.jmax);
-        float dt = adaptive_time_step_size(*U, *V, p.dt_max, p);
-        compute_FG(*F, *G, *U, *V, *domain, dt, p);
-        compute_rhs_pressure(*RHS, *F, *G, *domain, dt, p);
+        set_boundary_values(*U, *V, *domain, p.imax, p.jmax);                   // 66 -> 120 mus
+
+        set_specific_boundary_values(*U, *V, p.imax, p.jmax);                   // 4 -> 7 mus
+        float dt = adaptive_time_step_size(*U, *V, p.dt_max, p);                // 95 -> 125 mus
+        compute_FG(*F, *G, *U, *V, *domain, dt, p);                             // 1100 -> 1500
+        compute_rhs_pressure(*RHS, *F, *G, *domain, dt, p);                     // 240 -> 320 mus
 
         int it_max = 20;
         int it = 0;
         float rit = 0;
         do {
             ++it;
-            SOR(*P, *RHS, *domain, rit, p);
+            SOR(*P, *RHS, *domain, rit, p);                                     // 840 -> 1150 mus
         } while (it < it_max && rit > p.eps);
 
-        compute_uv(*U, *V, *F, *G, *P, *domain, dt, p);
+        compute_uv(*U, *V, *F, *G, *P, *domain, dt, p);                         // 400 -> 670 mus
     };
 
 public:

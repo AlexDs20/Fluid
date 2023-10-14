@@ -3,15 +3,10 @@
 #include <glm/glm.hpp>
 #include "Math/tensor.hpp"
 
-struct Placement {
-    Placement(glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), \
-            glm::vec2 scale = glm::vec2(1.0f, 1.0f), \
-            glm::vec2 orientation = glm::vec2(0.0f, 0.0f)): \
-        position(pos), scale(scale), orientation(orientation) {};
+struct Object {
     glm::vec3 position;
     glm::vec2 scale;
-    glm::vec2 orientation;
-    Tensor* tensor;
+    Tensor* tensor = nullptr;
 };
 
 class Quad {

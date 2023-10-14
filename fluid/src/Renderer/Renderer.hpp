@@ -52,7 +52,7 @@ public:
         delete q;
     };
 
-    bool update(const std::vector<Placement>& quads) {
+    bool update(const std::vector<Object>& quads) {
         bool running = !glfwWindowShouldClose(window);
         glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 180.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -64,7 +64,7 @@ public:
         glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        for (std::vector<Placement>::size_type i=0; i!=quads.size(); ++i) {
+        for (std::vector<Object>::size_type i=0; i!=quads.size(); ++i) {
             texture->load_texture(quads[i].tensor->data(), p.imax+2, p.jmax+2, 1);
             model = glm::mat4(1.0f);
             model = glm::scale(model, glm::vec3(quads[i].scale, 1.0f));

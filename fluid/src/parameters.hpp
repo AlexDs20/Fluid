@@ -15,8 +15,6 @@ struct Parameters {
     const float tau = 0.3;
 
     // grid
-    // const float length_x = 2.0f;
-    // const float length_y = 1.0f;
     const int imax = 150;
     const int jmax = 75;
     const float dx = 2.0 / (float)imax;
