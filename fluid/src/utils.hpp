@@ -13,7 +13,7 @@ class Timer {
             std::chrono::time_point<std::chrono::system_clock> end = std::chrono::system_clock::now();
             std::cout << "Elapsed time: "
                 << (std::chrono::duration_cast<std::chrono::microseconds>(end - start)).count()/(float) iteration
-                << "mus"
+                << "µs"
                 << std::endl;
         };
     private:

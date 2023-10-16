@@ -14,12 +14,12 @@ Texture::Texture() {
     initialize();
 };
 
-void Texture::load_texture(const std::vector<float>& data, int width, int height, int channels) {
+void Texture::load_texture(const float* data, int width, int height, int channels) {
     this->width = width;
     this->height = height;
     this->channels = channels;
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_FLOAT, data.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_FLOAT, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 }
 

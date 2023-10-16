@@ -36,18 +36,18 @@ public:
     };
 
     // Run simulation until simulated long enough
-    // {
-    //     Timer t(1000);
+    // { int n = 200; Timer t(n); for (int it=0; it<n; ++it)
     // }
     void update(){
-        set_boundary_values(*U, *V, *domain, p.imax, p.jmax);                   // 66 -> 120 mus
+        float dt;
+        set_boundary_values(*U, *V, *domain, p.imax, p.jmax);                   // 70 -> 81 mus
 
-        set_specific_boundary_values(*U, *V, p.imax, p.jmax);                   // 4 -> 7 mus
-        float dt = adaptive_time_step_size(*U, *V, p.dt_max, p);                // 95 -> 125 mus
+        set_specific_boundary_values(*U, *V, p.imax, p.jmax);                   // 4 mus
+        dt = adaptive_time_step_size(*U, *V, p.dt_max, p);                      // 95 -> 125 mus
         compute_FG(*F, *G, *U, *V, *domain, dt, p);                             // 1100 -> 1500
-        compute_rhs_pressure(*RHS, *F, *G, *domain, dt, p);                     // 240 -> 320 mus
+        compute_rhs_pressure(*RHS, *F, *G, *domain, dt, p);                     // 182 -> 215 mus
 
-        int it_max = 20;
+        int it_max = 5;
         int it = 0;
         float rit = 0;
         do {
