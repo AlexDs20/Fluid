@@ -16,6 +16,8 @@ Tensor::Tensor(std::vector<int> shape, float value): _shape(shape) {
     for (int i=0; i<size; ++i){
         _data[i] = value;
     }
+    // b2 = block_size * block_size;
+    // kimax = _shape[0] / block_size;
 };
 
 Tensor::~Tensor(){
@@ -62,7 +64,12 @@ const float* Tensor::data() const {
     return _data;
 };
 
-int inline Tensor::get_linear_index(int i, int j) const {
+int Tensor::get_linear_index(int i, int j) const {
+    // int ki = i / block_size;
+    // int kj = j / block_size;
+    // int bi = i - ki * block_size;
+    // int bj = j - kj * block_size;
+    // return (ki + kj*kimax)*b2 + bi + bj*block_size;
     return i + j * _shape[0];
 }
 
@@ -93,6 +100,8 @@ Domain::Domain(std::vector<int> shape, Cell value): _shape(shape) {
         size *= *it;
 
     _data.assign(size, value);
+    // b2 = block_size * block_size;
+    // kimax = _shape[0] / block_size;
 };
 
 Domain::Domain(std::vector<int> shape, std::vector<Cell> values): _shape(shape) {
@@ -130,7 +139,12 @@ const std::vector<Cell>& Domain::data() const {
     return _data;
 };
 
-Domain::size_type inline Domain::get_linear_index(int i, int j) const {
+Domain::size_type Domain::get_linear_index(int i, int j) const {
+    // int ki = i / block_size;
+    // int kj = j / block_size;
+    // int bi = i - ki * block_size;
+    // int bj = j - kj * block_size;
+    // return (ki + kj*kimax)*b2 + bi + bj*block_size;
     return i + j * _shape[0];
 }
 

@@ -2,57 +2,25 @@
 #include <cmath>
 #include <omp.h>
 #include "Physics/calculate.hpp"
-#include "parameters.hpp"
 
-
-float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const Parameters& p) {
-    float dx = p.dx;
-    float dy = p.dy;
-    float Re = p.Re;
-    float tau = p.tau;
-    int imax = p.imax;
-    int jmax = p.jmax;
-    const static float dxinv2 = 1.0f / (dx*dx);
-    const static float dyinv2 = 1.0f / (dy*dy);
-    const static float Re_dt = 0.5f * Re / (dxinv2 + dyinv2);
-
-    if ( (tau <= 0) || (tau > 1) ) {
-        return dt;
-    }
-
-    float absumax=0, absvmax=0;
-    for (int i=0; i<imax+2; ++i){
-        for (int j=0; j<jmax+2; ++j) {
-            absumax = std::max(absumax, std::fabs(U(i, j)));
-            absvmax = std::max(absvmax, std::fabs(V(i, j)));
-        }
-    }
-
-    const float dt_v_max = std::min(dx / absumax, dy / absvmax);
-
-    float ret = std::min(Re_dt, dt_v_max);
-    ret = std::min(dt, tau*ret);
-
-    return ret;
-};
 
 void set_constant_flags(Domain& domain, int imax, int jmax) {
     // Set the flags that do not change over time
     // Boundaries and sphere in the middle
     // Sphere info
-    const int px = (imax+2) / 5;
-    const int py = (jmax+2) / 2;
-    const float radius = std::min(imax, jmax) / 10.0;
+    const int px = imax / 5;
+    const int py = jmax / 2;
+    const float radius = std::min(imax, jmax) / 10.0f;
 
-    for (int i=0; i<imax+2; ++i) {
-        for (int j=0; j<jmax+2; ++j) {
+    for (int j=0; j<jmax+2; ++j) {
+        for (int i=0; i<imax+2; ++i) {
             // Above and Below
             if (i==0 || i==imax+1) {
                 domain(i, j).obstacle = true;
             } else if (j==0 || j==jmax+1) {      // left / right
                 domain(i, j).obstacle = true;
-            // } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
-            //     domain(i, j).obstacle = true;
+            } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
+                domain(i, j).obstacle = true;
             } else {
                 domain(i, j).obstacle = false;
             }
@@ -60,8 +28,8 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
     }
 
     // Set where the water is in the obstacle cells
-    for (int i=0; i<imax+2; ++i) {
-        for (int j=0; j<jmax+2; ++j) {
+    for (int j=0; j<jmax+2; ++j) {
+        for (int i=0; i<imax+2; ++i) {
             if (domain(i, j).obstacle) {
                 if (i<imax+1 & domain(i+1, j).obstacle == false){
                     domain(i, j).E = true;
@@ -81,8 +49,8 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
 };
 
 void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, int jmax) {
-    for (int i=0; i<imax+2; ++i) {
-        for (int j=0; j<jmax+2; ++j) {
+    for (int j=0; j<jmax+2; ++j) {
+        for (int i=0; i<imax+2; ++i) {
             if (domain(i, j).obstacle) {
                 // TODO: check boundary type
                 //       Start with no slip
@@ -150,37 +118,70 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
 
     // Left: input flow
     const float u = 0.8;
-    const int width = 5;
+    const int width = 4;
     for (int j=(jmax-width)/2; j!=(jmax+width)/2;++j)
     {
         U(0, j) = u;
     }
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, const Parameters& p) {
+float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const Constants& c) {
+    const float dx     = c.dx;
+    const float dy     = c.dy;
+    const float tau    = c.tau;
+    const int imax     = c.imax;
+    const int jmax     = c.jmax;
+    const float Re_dt  = 0.5f * c.Re / (c.dxdxinv + c.dydyinv);
+
+    if ( (tau <= 0) || (tau > 1) ) {
+        return dt;
+    }
+
+    float absumax=0, absvmax=0;
+    for (int j=0; j<jmax+2; ++j) {
+        for (int i=0; i<imax+2; ++i){
+            absumax = std::max(absumax, std::fabs(U(i, j)));
+            absvmax = std::max(absvmax, std::fabs(V(i, j)));
+        }
+    }
+
+    const float dt_v_max = std::min(dx / absumax, dy / absvmax);
+
+    float ret = std::min(Re_dt, dt_v_max);
+    ret = std::min(dt, tau*ret);
+
+    return ret;
+};
+
+void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float gx, float gy, const Constants& c) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
-    const static float Re = p.Re;
-    const static float dx = p.dx;
-    const static float dy = p.dy;
-    const static float gamma = p.gamma;
-    const static int imax = p.imax;
-    const static int jmax = p.jmax;
-    const static float gx = p.gx;
-    const static float gy = p.gy;
-    const static float Reinv = 1.0f/Re;
 
-    const static float dxinv = 1.0f/dx;
-    const static float dyinv = 1.0f/dy;
+    // 100 math ops per loop
+    // 100 * (iamx+2)*(jamx+2) = 100 * 256 * 128 = 3_276_800 math ops
+    // cpu:
+    // 2.7Ghz -> 2_700_000_000 clocks / seconds
+    //  simd -> * 8
+    //  core -> * 4         (*8 if consider logical cores)
 
-    const static float dxinv2 = dxinv*dxinv;
-    const static float dyinv2 = dyinv*dyinv;
+    const float Re          = c.Re;
+    const float dx          = c.dx;
+    const float dy          = c.dy;
+    const int imax          = c.imax;
+    const int jmax          = c.jmax;
+    const float Reinv       = 1.0f/Re;
 
-    const static float dxinv4 = dxinv * 0.25f;
-    const static float gammadxinv4 = gamma * dxinv4;
+    const float dxinv       = c.dxinv;
+    const float dyinv       = c.dyinv;
 
-    const static float dyinv4 = dyinv * 0.25f;
-    const static float gammadyinv4 = gamma * dyinv4;
+    const float dxinv2      = c.dxdxinv;
+    const float dyinv2      = c.dydyinv;
+
+    const float dxinv4      = c.dxinv4;
+    const float gammadxinv4 = c.gammadxinv4;
+
+    const float dyinv4      = c.dyinv4;
+    const float gammadyinv4 = c.gammadyinv4;
 
     // F
     float dudxdx;
@@ -194,6 +195,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
     float duvdx;
     float dvvdy;
 
+    // U
     float uijm;
     float uij;
     float uijp;
@@ -202,6 +204,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
     float uimjp;
     float uipj;
 
+    // V
     float vijm;
     float vij;
     float vijp;
@@ -212,8 +215,8 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
 
     float one, two, three, four, five, six;
 
-    for (int i=0; i!=imax+2; ++i) {
-        for (int j=0; j!=jmax+2; ++j) {
+    for (int j=0; j!=jmax+2; ++j) {
+        for (int i=0; i!=imax+2; ++i) {
             if (domain(i, j).obstacle == false) {
                 uimj = U(i-1, j);
                 uimjp= U(i-1, j+1);
@@ -231,8 +234,8 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
 
                 if (i<imax+1 & domain(i+1, j).obstacle == false)
                 {
-                    dudxdx = (uipj - 2*uij + uimj) * dxinv2;
-                    dudydy = (uijp - 2*uij + uijm) * dyinv2;
+                    dudxdx = (uipj - 2.0f*uij + uimj) * dxinv2;
+                    dudydy = (uijp - 2.0f*uij + uijm) * dyinv2;
 
                     one   = uij  + uipj;
                     two   = uimj + uij;
@@ -240,6 +243,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
                     four  = uimj - uij;
                     duudx =        dxinv4 * (      one  * one   -      two  * two )       \
                             + gammadxinv4 * ( std::fabs(one) * three - std::fabs(two) * four );
+                    // 23
 
                     one   = vij + vipj;
                     two   = uij + uijp;
@@ -249,14 +253,16 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
                     six =  uijm - uij;
                     duvdy =        dyinv4 * (      one  * two -        three  * four )      \
                             + gammadyinv4 * ( std::fabs(one) * five -  std::fabs(three) * six );
+                    // 17
 
                     F(i, j) = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy + gx);
+                    // 7
                 }
 
                 if (j<jmax+1 & domain(i, j+1).obstacle == false)
                 {
-                    dvdxdx = (vipj - 2*vij + vimj) * dxinv2;
-                    dvdydy = (vijp - 2*vij + vijm) * dyinv2;
+                    dvdxdx = (vipj - 2.0f*vij + vimj) * dxinv2;
+                    dvdydy = (vijp - 2.0f*vij + vijm) * dyinv2;
 
                     one   = uij  + uijp;
                     two   = vij  + vipj;
@@ -275,7 +281,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
                             + gammadyinv4 * ( std::fabs(one) * five - std::fabs(three) * six ) ;
 
                     G(i, j) = vij + dt * (Reinv * (dvdxdx + dvdydy) - duvdx - dvvdy + gy );
-
+                    // 48?
                 }
             } else {
                 if (domain(i, j).N)
@@ -292,45 +298,32 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
     }
 };
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dt, const Parameters& p) {
-    float dx = p.dx;
-    float dy = p.dy;
-    int imax = p.imax;
-    int jmax = p.jmax;
-    const static float dxinv = 1.0f/dx;
-    const static float dyinv = 1.0f/dy;
+void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dt, const Constants& c) {
+    const int imax    = c.imax;
+    const int jmax    = c.jmax;
+    const float dxinv = c.dxinv;
+    const float dyinv = c.dyinv;
 
     const float dtinv = 1.0f / dt;
 
-    float fij;
-    float fimj;
-    float gij;
-    float gijm;
-
-    for (int i=0; i<imax+2; ++i) {
-        for (int j=0; j<jmax+2; ++j) {
+    for (int j=0; j<jmax+2; ++j) {
+        for (int i=0; i<imax+2; ++i) {
             if (domain(i, j).obstacle==false) {
-                fimj = F(i-1, j);
-                fij  = F(i, j);
-                gijm = G(i, j-1);
-                gij  = G(i, j);
-                RHS(i, j) = dtinv * ( dxinv * ( fij - fimj ) + dyinv * ( gij - gijm ) );
+                RHS(i, j) = dtinv * ( dxinv * ( F(i, j) - F(i-1, j) ) + dyinv * ( G(i, j) - G(i, j-1) ) );
             }
         }
     }
 };
 
-void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const Parameters& p) {
-    float omega = p.omega;
-    float dx = p.dx;
-    float dy = p.dy;
-    int imax = p.imax;
-    int jmax = p.jmax;
-    const static float dxinv = 1.0f / dx;
-    const static float dyinv = 1.0f / dy;
-    const static float dxinv2 = dxinv * dxinv;
-    const static float dyinv2 = dyinv * dyinv;
-    const static float coeff = omega / ( 2 * (dxinv2 + dyinv2) );
+void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const Constants& c) {
+    const int imax     = c.imax;
+    const int jmax     = c.jmax;
+    const float dxinv2 = c.dxdxinv;
+    const float dyinv2 = c.dydyinv;
+    const float omega  = c.omega;
+    const float coeff  = c.coeff;
+
+    Tensor Pt({jmax+2, imax+2}, 0.0f);
 
 
     float rit_tmp;
@@ -341,8 +334,8 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const P
     int edges;
 
     // Set pressure boundary conditions
-    for (int i=0; i!=imax+2; ++i) {
-        for (int j=0; j!=jmax+2; ++j) {
+    for (int j=0; j!=jmax+2; ++j) {
+        for (int i=0; i!=imax+2; ++i) {
             if (domain(i, j).obstacle) {
                 tmp_p = 0.0f;
                 edges = 0;
@@ -369,8 +362,8 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const P
 
 
     // Update pressure
-    for (int i=1; i!=imax+1; ++i) {
-        for (int j=1; j!=jmax+1; ++j) {
+    for (int j=1; j!=jmax+1; ++j) {
+        for (int i=1; i!=imax+1; ++i) {
             if (domain(i, j).obstacle == false) {
                 P(i, j) = (1.0f - omega) * P(i, j)                    \
                     + coeff                                           \
@@ -383,11 +376,11 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const P
     }
 
     // Compute residual
-    for (int i=1; i!=imax+1; ++i) {
-        for (int j=1; j!=jmax+1; ++j) {
+    for (int j=1; j!=jmax+1; ++j) {
+        for (int i=1; i!=imax+1; ++i) {
             if (domain(i, j).obstacle == false) {
-                rit_tmp = dxinv2 * ( P(i-1, j) - 2.0f * P(i, j) + P(i+1, j) ) \
-                        + dyinv2 * ( P(i, j-1) - 2.0f * P(i, j) + P(i, j+1) ) \
+                rit_tmp = dxinv2 * ( P(i-1, j) - 2.0f*P(i, j) + P(i+1, j) ) \
+                        + dyinv2 * ( P(i, j-1) - 2.0f*P(i, j) + P(i, j+1) ) \
                         - RHS(i, j);
                 rit = std::max(std::fabs(rit_tmp), rit);
             }
@@ -395,16 +388,15 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const P
     }
 };
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Domain& domain, float dt, const Parameters& p) {
-    float dx = p.dx;
-    float dy = p.dy;
-    int imax = p.imax;
-    int jmax = p.jmax;
-    const static float dxinv = 1.0f / dx;
-    const static float dyinv = 1.0f / dy;
 
-    float dtdx = dt * dxinv;
-    float dtdy = dt * dyinv;
+void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Domain& domain, float dt, const Constants& c) {
+    const int imax    = c.imax;
+    const int jmax    = c.jmax;
+    const float dxinv = c.dxinv;
+    const float dyinv = c.dyinv;
+
+    const float dtdx = dt * dxinv;
+    const float dtdy = dt * dyinv;
 
     float pipj;
     float pij;
@@ -423,3 +415,51 @@ void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Te
         }
     }
 };
+
+void get_parameters(const std::string& problem, Parameters& params, Constants& constants){
+    if (problem == "inflow"){
+        // Fluid
+        params.Re = 10000;
+        params.u0 = 0.0f;
+        params.v0 = 0.0f;
+        params.p0 = 0.0f;
+        params.gx = 0.0f;
+        params.gy = 0.0f;
+
+        // time
+        params.t_max = 100;
+        params.dt_max = 0.04;
+        params.tau = 0.3;
+
+        // grid
+        params.imax = 256-2;
+        params.jmax = 128-2;
+        params.xlength = 2.0f;
+        params.ylength = 1.0f;
+
+        // pressure
+        params.it_max = 20;
+        params.eps = 0.001f;
+        params.omega = 1.5;
+
+        // Derivative scheme
+        params.gamma = 0.9f;
+    }
+
+    constants.imax = params.imax;
+    constants.jmax = params.jmax;
+    constants.dx = params.xlength / params.imax;
+    constants.dy = params.ylength / params.jmax;
+    constants.dxinv = 1.0f / constants.dx;
+    constants.dyinv = 1.0f / constants.dy;
+    constants.dxdxinv = constants.dxinv * constants.dxinv;
+    constants.dydyinv = constants.dyinv * constants.dyinv;
+    constants.dxinv4 = constants.dxinv * 0.25f;
+    constants.dyinv4 = constants.dyinv * 0.25f;
+    constants.gammadxinv4 = params.gamma * constants.dxinv4;
+    constants.gammadyinv4 = params.gamma * constants.dyinv4;
+    constants.Re = params.Re;
+    constants.tau = params.tau;
+    constants.omega = params.omega;
+    constants.coeff = params.omega / ( 2.0f * (constants.dxdxinv + constants.dydyinv) );
+}

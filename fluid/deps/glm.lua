@@ -1,5 +1,5 @@
 project "GLM"
-    kind "StaticLib"
+    kind "SharedLib"
     language "C"
     architecture "x86_64"
 
@@ -31,10 +31,10 @@ project "GLM"
             "_CRT_SECURE_NO_WARNINGS"
         }
 
-    filter "configurations:Debug"
-        runtime "Debug"
+    filter "configurations:debug"
+        runtime "debug"
         symbols "on"
 
-    filter "configurations:Release"
-        runtime "Release"
+    filter "configurations:release"
+        runtime "release"
         optimize "on"

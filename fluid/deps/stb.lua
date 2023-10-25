@@ -1,5 +1,5 @@
 project "STB"
-    kind "StaticLib"
+    kind "SharedLib"
     language "C"
 
     includedirs { "stb/" }

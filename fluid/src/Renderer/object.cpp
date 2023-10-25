@@ -1,4 +1,4 @@
-#include <glad/glad.h>
+#include "glad/glad.h"
 #include "Renderer/object.hpp"
 
 void Quad::Draw() const {

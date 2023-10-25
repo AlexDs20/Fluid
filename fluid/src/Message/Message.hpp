@@ -8,11 +8,14 @@ enum Event {
     KEY_PRESS_S,
     KEY_PRESS_D,
     KEY_PRESS_ESCAPE,
-};
 
+    SET_IMAX,
+    SET_JMAX,
+};
 
 struct Message{
         Event e;
+        int value;
 };
 
 class MessageBus{

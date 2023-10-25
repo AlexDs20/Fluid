@@ -1,5 +1,5 @@
 project "GLFW"
-    kind "StaticLib"
+    kind "SharedLib"
     language "C"
     architecture "x86_64"
 
@@ -72,10 +72,10 @@ project "GLFW"
             "_CRT_SECURE_NO_WARNINGS"
         }
 
-    filter "configurations:Debug"
-        runtime "Debug"
+    filter "configurations:debug"
+        runtime "debug"
         symbols "On"
 
-    filter "configurations:Release"
-        runtime "Release"
+    filter "configurations:release"
+        runtime "release"
         optimize "On"

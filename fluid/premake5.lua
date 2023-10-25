@@ -11,11 +11,13 @@ workspace "Fluid Simulation"
 
     filter { "configurations:release" }
         optimize "On"
+        symbols "On"
 
     filter { "configurations:dev" }
         optimize "On"
         defines{ "_OMP" }
         links{ "omp" }
+        symbols "On"
 
     filter "system:linux"
         defines{ "_X11" }
@@ -28,8 +30,6 @@ workspace "Fluid Simulation"
 include "deps/glad.lua"
 include "deps/glfw.lua"
 include "deps/glm.lua"
-include "deps/stb.lua"
-
 
 project "Fluid"
     kind "WindowedApp"
@@ -38,16 +38,21 @@ project "Fluid"
     includedirs
     {
         "src/",
+        "src/Console/",
+        "src/Input/",
+        "src/Math/",
+        "src/Message/",
+        "src/Physics/",
+        "src/Renderer/",
         "deps/stb/"
     }
 
     files {
         "src/*.cpp",
-        "src/*.hpp",
         "src/Math/**",
         "src/Physics/**",
         "src/Renderer/**",
         "src/Message/**",
     }
 
-    links { "GLAD", "GLFW", "STB", "GLM" }
+    links { "GLAD", "GLFW", "GLM" }

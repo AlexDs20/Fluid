@@ -1,5 +1,5 @@
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
+#include "stb_image.h"
 #include <string>
 #include <iostream>
 
@@ -14,10 +14,32 @@ Texture::Texture() {
     initialize();
 };
 
+Texture::~Texture() {
+    // delete[] D;
+};
+
 void Texture::load_texture(const float* data, int width, int height, int channels) {
     this->width = width;
     this->height = height;
     this->channels = channels;
+
+    // if (D == nullptr) {
+    //     D = new float[width*height];
+    // }
+
+    // int block_size=64;
+    // int b2 = block_size * block_size;
+    // int kimax = width / block_size;
+    // for (int j=0; j<height; j++) {
+    //     for (int i=0; i<width; i++){
+    //         int ki = i / block_size;
+    //         int kj = j / block_size;
+    //         int bi = i - ki * block_size;
+    //         int bj = j - kj * block_size;
+    //         int index = (ki + kj*kimax)*b2 + bi + bj*block_size;
+    //         D[i + j*width] = data[index];
+    //     }
+    // }
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_FLOAT, data);
     glGenerateMipmap(GL_TEXTURE_2D);

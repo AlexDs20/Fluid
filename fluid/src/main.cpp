@@ -1,5 +1,5 @@
 #include <iostream>
-#include <glm/glm.hpp>
+#include "glm/glm.hpp"
 
 #include "Message/Message.hpp"
 #include "Physics/Physics.hpp"
@@ -12,28 +12,26 @@
 #include <chrono>
 
 
-unsigned int w = 1920;
-unsigned int h = 1080;
-Camera camera(glm::vec3(0.0f,0.0f, 5.0f));
-float lastX = w / 2.0f;
-float lastY = h / 2.0f;
-bool firstMouse = true;
+ unsigned int w = 1920;
+ unsigned int h = 1080;
+ Camera camera(glm::vec3(0.0f,0.0f, 5.0f));
+ float lastX = w / 2.0f;
+ float lastY = h / 2.0f;
+ bool firstMouse = true;
 float deltaTime = 0.0f;
 
 
 int main() {
     MessageBus messageBus;
-    Physics physics(&messageBus);
-    Renderer renderer(&messageBus);
-    Input input(&messageBus, renderer.window);
+    // Renderer renderer(&messageBus);
+    // Input input(&messageBus, renderer.window);
     Console console;
+    Fluid fluid("inflow", &messageBus);
 
-    messageBus.add_receiver(physics.read_message);
-    messageBus.add_receiver(renderer.read_message);
-    messageBus.add_receiver(input.read_message);
+    // messageBus.add_receiver(physics.read_message);
+    // messageBus.add_receiver(renderer.read_message);
+    // messageBus.add_receiver(input.read_message);
     messageBus.add_receiver(console.read_message);
-
-    Fluid fluid;
 
     //--------------------
     //  Scene
@@ -63,13 +61,13 @@ int main() {
     bool running = true;
     while (running) {
         auto startFrameTime = std::chrono::system_clock::now();
-        input.update();
-        processInput(renderer.window);
+        // input.update();
+        // processInput(renderer.window);
 
         fluid.update();
 
-        running = renderer.update(quads);
-        glfwPollEvents();
+        // running = renderer.update(quads, fluid.constants.imax+2, fluid.constants.jmax+2);
+        // glfwPollEvents();
 
         messageBus.dispatch();
 

@@ -1,5 +1,5 @@
 #pragma once
-#include <glad/glad.h>
+#include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/gtx/transform.hpp>
@@ -10,7 +10,6 @@
 #include "Renderer/shader.hpp"
 #include "Renderer/texture.hpp"
 #include "Renderer/object.hpp"
-#include "parameters.hpp"
 #include "Renderer/camera.hpp"
 #include "Message/Message.hpp"
 
@@ -43,6 +42,9 @@ public:
     }
 
     static void read_message(Message m){
+        if (m.e == SET_IMAX){
+        } else if (m.e == SET_JMAX) {
+        }
     };
 
     ~Renderer() {
@@ -52,7 +54,7 @@ public:
         delete q;
     };
 
-    bool update(const std::vector<Object>& quads) {
+    bool update(const std::vector<Object>& quads, int width, int height) {
         bool running = !glfwWindowShouldClose(window);
         glm::mat4 proj = glm::perspective(glm::radians(camera.Zoom), (float)w/h, 0.1f, 180.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -65,7 +67,7 @@ public:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         for (std::vector<Object>::size_type i=0; i!=quads.size(); ++i) {
-            texture->load_texture(quads[i].tensor->data(), p.imax+2, p.jmax+2, 1);
+            texture->load_texture(quads[i].tensor->data(), width, height, 1);
             model = glm::mat4(1.0f);
             model = glm::scale(model, glm::vec3(quads[i].scale, 1.0f));
             model = glm::translate(model, quads[i].position);
@@ -79,7 +81,6 @@ public:
 private:
     Shader *shader;
     Texture *texture;
-    Parameters p;
     Quad *q;
 
     GLFWwindow* initialize_context() {

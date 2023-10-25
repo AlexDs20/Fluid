@@ -27,9 +27,12 @@ class Tensor {
         const float* data() const;
 
     private:
-        int inline get_linear_index(int i, int j) const;
+        int get_linear_index(int i, int j) const;
         std::vector<int> _shape;
         float* _data;
+        // int block_size=64;
+        // int b2;
+        // int kimax;
 };
 
 
@@ -66,7 +69,10 @@ class Domain {
         const std::vector<Cell>& data() const;
 
     private:
-        size_type inline get_linear_index(int i, int j) const;
+        size_type get_linear_index(int i, int j) const;
         std::vector<int> _shape;
         std::vector<Cell> _data;
+        // int block_size=64;
+        // int b2;
+        // int kimax;
 };
