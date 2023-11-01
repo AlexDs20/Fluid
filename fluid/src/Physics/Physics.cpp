@@ -3,6 +3,7 @@
 #include "Message/Message.hpp"
 #include "Physics/calculate.hpp"
 #include "Physics/Physics.hpp"
+#include "utils.hpp"
 
 
 Fluid::Fluid(const std::string& problem, MessageBus* m): Sender(m) {
@@ -35,19 +36,20 @@ Fluid::~Fluid(){
 // }
 void Fluid::update(){
     float dt;
-    set_boundary_values(*U, *V, *domain, constants.imax, constants.jmax);                   // 70 -> 81 mus
-    set_specific_boundary_values(*U, *V, constants.imax, constants.jmax);                   // 4 mus
-    dt = adaptive_time_step_size(*U, *V, params.dt_max, constants);                      // 95 -> 125 mus
-    compute_FG(*F, *G, *U, *V, *domain, dt, params.gx, params.gy, constants);                             // 1100 -> 1500
-    compute_rhs_pressure(*RHS, *F, *G, *domain, dt, constants);                     // 182 -> 215 mus
+    set_boundary_values(*U, *V, *domain, constants.imax, constants.jmax);           // 70 -- 81 mus
+    set_specific_boundary_values(*U, *V, constants.imax, constants.jmax);           // 4 mus
+
+    dt = adaptive_time_step_size(*U, *V, params.dt_max, constants);                 // 95 -- 125 mus
+    compute_FG(*F, *G, *U, *V, *domain, dt, params.gx, params.gy, constants);       // 1100 -- 1500
+    compute_rhs_pressure(*RHS, *F, *G, *domain, dt, constants);                     // 182 -- 215 mus
 
     int it_max = 5;
     int it = 0;
     float rit = 0;
     do {
         ++it;
-        SOR(*P, *RHS, *domain, rit, constants);                                     // 840 -> 1150 mus
+        SOR(*P, *RHS, *domain, rit, constants);                                     // 840 -- 1150 mus
     } while (it < it_max && rit > params.eps);
 
-    compute_uv(*U, *V, *F, *G, *P, *domain, dt, constants);                         // 400 -> 670 mus
+    compute_uv(*U, *V, *F, *G, *P, *domain, dt, constants);                         // 400 -- 670 mus
 };

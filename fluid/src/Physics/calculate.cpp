@@ -3,6 +3,8 @@
 #include <omp.h>
 #include "Physics/calculate.hpp"
 
+#include <immintrin.h>
+
 
 void set_constant_flags(Domain& domain, int imax, int jmax) {
     // Set the flags that do not change over time
@@ -12,8 +14,8 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
     const int py = jmax / 2;
     const float radius = std::min(imax, jmax) / 10.0f;
 
-    for (int j=0; j<jmax+2; ++j) {
-        for (int i=0; i<imax+2; ++i) {
+    for (int j=0; j<jmax+2; j+=1) {
+        for (int i=0; i<imax+2; i+=1) {
             // Above and Below
             if (i==0 || i==imax+1) {
                 domain(i, j).obstacle = true;
@@ -104,6 +106,7 @@ void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, i
 
 void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
     // Outflow
+    int n=0;
     for (int j=1; j!=jmax+1; ++j) {
         U(imax, j) = U(imax-1, j);
         V(imax+1, j) = V(imax, j);
@@ -125,6 +128,14 @@ void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
     }
 };
 
+
+__m256 fabs(const __m256& wide){
+    __m256i mask = _mm256_set1_epi32(0x7FFFFFFF);
+    mask = _mm256_and_si256(_mm256_castps_si256(wide), mask);
+    return _mm256_castsi256_ps(mask);
+};
+
+
 float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const Constants& c) {
     const float dx     = c.dx;
     const float dy     = c.dy;
@@ -137,12 +148,25 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const
         return dt;
     }
 
-    float absumax=0, absvmax=0;
+    __m256 wide_absu = _mm256_setzero_ps();
+    __m256 wide_absv = _mm256_setzero_ps();
+
     for (int j=0; j<jmax+2; ++j) {
-        for (int i=0; i<imax+2; ++i){
-            absumax = std::max(absumax, std::fabs(U(i, j)));
-            absvmax = std::max(absvmax, std::fabs(V(i, j)));
+        for (int i=0; i<imax+2; i+=8){
+            __m256 local_absu = fabs(_mm256_load_ps(&U(i, j)));
+            wide_absu = _mm256_max_ps(local_absu, wide_absu);
+
+            __m256 local_absv = fabs(_mm256_load_ps(&V(i, j)));
+            wide_absv = _mm256_max_ps(local_absv, wide_absv);
         }
+    }
+
+    // combine U and V maxes
+    float absumax=0;
+    float absvmax=0;
+    for (int i=0; i<8; i++) {
+        absumax = std::max(absumax, wide_absu[i]);
+        absvmax = std::max(absvmax, wide_absv[i]);
     }
 
     const float dt_v_max = std::min(dx / absumax, dy / absvmax);
@@ -165,14 +189,9 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
     //  core -> * 4         (*8 if consider logical cores)
 
     const float Re          = c.Re;
-    const float dx          = c.dx;
-    const float dy          = c.dy;
     const int imax          = c.imax;
     const int jmax          = c.jmax;
     const float Reinv       = 1.0f/Re;
-
-    const float dxinv       = c.dxinv;
-    const float dyinv       = c.dyinv;
 
     const float dxinv2      = c.dxdxinv;
     const float dyinv2      = c.dydyinv;
@@ -323,8 +342,11 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const C
     const float omega  = c.omega;
     const float coeff  = c.coeff;
 
-    Tensor Pt({jmax+2, imax+2}, 0.0f);
+    // static Tensor Pt({jmax+2, imax+2}, 0.0f);
 
+    // for (int j=0; j!=jmax+2; ++j)
+    //     for (int i=0; i!=imax+2; ++i)
+    //         Pt(j, i) = P(i, j);
 
     float rit_tmp;
 
@@ -340,10 +362,12 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const C
                 tmp_p = 0.0f;
                 edges = 0;
                 if (domain(i, j).N) {
+                    // tmp_p += Pt(j+1, i);
                     tmp_p += P(i, j+1);
                     ++edges;
                 }
                 if (domain(i, j).S) {
+                    // tmp_p += Pt(j-1, i);
                     tmp_p += P(i, j-1);
                     ++edges;
                 }
@@ -356,6 +380,7 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const C
                     ++edges;
                 }
                 P(i, j) = tmp_p / (float)edges;
+                // Pt(j, i) = P(i, j);
             }
         }
     }
@@ -367,10 +392,12 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const C
             if (domain(i, j).obstacle == false) {
                 P(i, j) = (1.0f - omega) * P(i, j)                    \
                     + coeff                                           \
-                    * ( dxinv2 * ( P(i+1, j) + P(i-1, j) )            \
-                      + dyinv2 * ( P(i, j+1) + P(i, j-1) )            \
+                    * ( dxinv2 * ( P(i-1, j) + P(i+1, j) )            \
+                      + dyinv2 * ( P(i, j-1) + P(i, j+1) )            \
                       - RHS(i, j)                                     \
                       );
+                      // + dyinv2 * ( Pt(j-1, i) + Pt(j+1, i) )
+                // Pt(j, i) = P(i, j);
             }
         }
     }
@@ -382,6 +409,7 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const C
                 rit_tmp = dxinv2 * ( P(i-1, j) - 2.0f*P(i, j) + P(i+1, j) ) \
                         + dyinv2 * ( P(i, j-1) - 2.0f*P(i, j) + P(i, j+1) ) \
                         - RHS(i, j);
+                        // + dyinv2 * ( Pt(j-1, i) - 2.0f*P(i, j) + Pt(j+1, i) )
                 rit = std::max(std::fabs(rit_tmp), rit);
             }
         }
@@ -402,6 +430,7 @@ void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Te
     float pij;
     float pijp;
 
+
     for (int j=1; j!=jmax+1; ++j) {
         for (int i=1; i!=imax+1; ++i) {
             pij  = P(i, j);
@@ -414,6 +443,19 @@ void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Te
                 V(i, j) = G(i, j) - dtdy * (pijp - pij);
         }
     }
+
+    // for (int j=1; j!=jmax+1; ++j) {
+    //     for (int i=1; i!=imax+1; i+=8) {
+    //         __m256 wide_pij = _mm256_load_ps(&P(i, j));
+    //         __m256 wide_pijp = _mm256_setr_ps(P(i, j+1), P(i+1, j+1), P(i+2, j+1), P(i+3, j+1), P(i+4, j+1), P(i+5, j+1), P(i+6, j+1), P(i+7, j+1));
+    //         __m256 wide_pipj = _mm256_load_ps(&P(i+1, j));
+
+    //         if ( (domain(i, j).obstacle==false) && domain(i+1, j).obstacle==false )
+    //             U(i, j) = F(i, j) - dtdx * (pipj - pij);
+    //         if ( (domain(i, j).obstacle==false) && domain(i, j+1).obstacle==false )
+    //             V(i, j) = G(i, j) - dtdy * (pijp - pij);
+    //     }
+    // }
 };
 
 void get_parameters(const std::string& problem, Parameters& params, Constants& constants){
