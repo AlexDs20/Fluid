@@ -5,6 +5,8 @@
 #include "Physics/calculate.hpp"
 #include "Physics/define.hpp"
 
+#include <immintrin.h>
+
 
 void set_constant_flags(Matrixi& domain, int imax, int jmax) {
     // Set the flags that do not change over time
@@ -50,53 +52,53 @@ void set_constant_flags(Matrixi& domain, int imax, int jmax) {
     }
 };
 
-/*
+
 void set_boundary_values(Matrix& U, Matrix& V, const Matrixi& domain, int imax, int jmax) {
     for (int j=0; j<jmax+2; ++j) {
         for (int i=0; i<imax+2; ++i) {
-            if (domain(i, j).obstacle) {
+            if ((domain(i, j) & OBSTACLE) == 1) {
                 // TODO: check boundary type
                 //       Start with no slip
                 // U
-                if (domain(i, j).W) {
+                if ((domain(i, j) & W) != 0) {
                     U(i-1, j) = 0;
                 } else {
-                    if (domain(i, j).N) {
+                    if ((domain(i, j) & N) != 0) {
                         U(i-1, j) = -U(i-1, j+1);
                     }
-                    if (domain(i, j).S) {
+                    if ((domain(i, j) & S) != 0) {
                         U(i-1, j) = -U(i-1, j-1);
                     }
                 }
-                if (domain(i, j).E) {
+                if ((domain(i, j) & E) != 0) {
                     U(i, j) = 0;
                 } else {
-                    if (domain(i, j).N) {
+                    if ((domain(i, j) & N) != 0) {
                         U(i, j) = -U(i, j+1);
                     }
-                    if (domain(i, j).S) {
+                    if ((domain(i, j) & S) != 0) {
                         U(i, j) = -U(i, j-1);
                     }
                 }
 
                 // V
-                if (domain(i, j).N) {
+                if ((domain(i, j) & N) != 0) {
                     V(i, j) = 0;
                 } else {
-                    if (domain(i, j).W) {
+                    if ((domain(i, j) & W) != 0) {
                         V(i, j) = -V(i-1, j);
                     }
-                    if (domain(i, j).E) {
+                    if ((domain(i, j) & E) != 0) {
                         V(i, j) = -V(i+1, j);
                     }
                 }
-                if (domain(i, j).S) {
+                if ((domain(i, j) & S) != 0) {
                     V(i, j-1) = 0;
                 } else {
-                    if (domain(i, j).W) {
+                    if ((domain(i, j) & W) != 0) {
                         V(i, j-1) = -V(i-1, j-1);
                     }
-                    if (domain(i, j).E) {
+                    if ((domain(i, j) & E) != 0) {
                         V(i, j-1) = -V(i+1, j-1);
                     }
                 }
@@ -107,7 +109,6 @@ void set_boundary_values(Matrix& U, Matrix& V, const Matrixi& domain, int imax, 
 
 void set_specific_boundary_values(Matrix& U, Matrix& V, int imax, int jmax) {
     // Outflow
-    int n=0;
     for (int j=1; j!=jmax+1; ++j) {
         U(imax, j) = U(imax-1, j);
         V(imax+1, j) = V(imax, j);
@@ -178,6 +179,7 @@ float adaptive_time_step_size( const Matrix& U, const Matrix& V, float dt, const
     return ret;
 };
 
+
 void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Matrixi& domain, float dt, float gx, float gy, const Constants& c) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
@@ -237,7 +239,7 @@ void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Ma
 
     for (int j=0; j!=jmax+2; ++j) {
         for (int i=0; i!=imax+2; ++i) {
-            if (domain(i, j).obstacle == false) {
+            if ((domain(i, j) & OBSTACLE) == 0) {
                 uimj = U(i-1, j);
                 uimjp= U(i-1, j+1);
                 uijm = U(i,   j-1);
@@ -252,7 +254,7 @@ void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Ma
                 vipjm= V(i+1, j-1);
                 vipj = V(i+1, j);
 
-                if (i<imax+1 & domain(i+1, j).obstacle == false)
+                if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0))
                 {
                     dudxdx = (uipj - 2.0f*uij + uimj) * dxinv2;
                     dudydy = (uijp - 2.0f*uij + uijm) * dyinv2;
@@ -279,7 +281,7 @@ void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Ma
                     // 7
                 }
 
-                if (j<jmax+1 & domain(i, j+1).obstacle == false)
+                if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0))
                 {
                     dvdxdx = (vipj - 2.0f*vij + vimj) * dxinv2;
                     dvdydy = (vijp - 2.0f*vij + vijm) * dyinv2;
@@ -304,14 +306,14 @@ void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Ma
                     // 48?
                 }
             } else {
-                if (domain(i, j).N)
+                if ((domain(i, j) & N) != 0)
                     G(i, j) = V(i, j);
-                else if (domain(i, j).S)
+                else if ((domain(i, j) & S) != 0)
                     G(i, j-1) = V(i, j-1);
 
-                if (domain(i, j).W)
+                if ((domain(i, j) & W) != 0)
                     F(i-1, j) = U(i-1, j);
-                else if (domain(i, j).E)
+                else if ((domain(i, j) & E) != 0)
                     F(i, j) = U(i, j);
             }
         }
@@ -328,7 +330,7 @@ void compute_rhs_pressure(Matrix& RHS, const Matrix& F, const Matrix& G, const M
 
     for (int j=0; j<jmax+2; ++j) {
         for (int i=0; i<imax+2; ++i) {
-            if (domain(i, j).obstacle==false) {
+            if ((domain(i, j) & OBSTACLE) == 0) {
                 RHS(i, j) = dtinv * ( dxinv * ( F(i, j) - F(i-1, j) ) + dyinv * ( G(i, j) - G(i, j-1) ) );
             }
         }
@@ -359,24 +361,24 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
     // Set pressure boundary conditions
     for (int j=0; j!=jmax+2; ++j) {
         for (int i=0; i!=imax+2; ++i) {
-            if (domain(i, j).obstacle) {
+            if (domain(i, j) & OBSTACLE) {
                 tmp_p = 0.0f;
                 edges = 0;
-                if (domain(i, j).N) {
+                if ((domain(i, j) & N) != 0) {
                     // tmp_p += Pt(j+1, i);
                     tmp_p += P(i, j+1);
                     ++edges;
                 }
-                if (domain(i, j).S) {
+                if ((domain(i, j) & S) != 0) {
                     // tmp_p += Pt(j-1, i);
                     tmp_p += P(i, j-1);
                     ++edges;
                 }
-                if (domain(i, j).E) {
+                if ((domain(i, j) & E) != 0) {
                     tmp_p += P(i+1, j);
                     ++edges;
                 }
-                if (domain(i, j).W) {
+                if ((domain(i, j) & W) != 0) {
                     tmp_p += P(i-1, j);
                     ++edges;
                 }
@@ -390,7 +392,7 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
     // Update pressure
     for (int j=1; j!=jmax+1; ++j) {
         for (int i=1; i!=imax+1; ++i) {
-            if (domain(i, j).obstacle == false) {
+            if ((domain(i, j) & OBSTACLE) == 0) {
                 P(i, j) = (1.0f - omega) * P(i, j)                    \
                     + coeff                                           \
                     * ( dxinv2 * ( P(i-1, j) + P(i+1, j) )            \
@@ -406,7 +408,7 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
     // Compute residual
     for (int j=1; j!=jmax+1; ++j) {
         for (int i=1; i!=imax+1; ++i) {
-            if (domain(i, j).obstacle == false) {
+            if ((domain(i, j) & OBSTACLE) == 0) {
                 rit_tmp = dxinv2 * ( P(i-1, j) - 2.0f*P(i, j) + P(i+1, j) ) \
                         + dyinv2 * ( P(i, j-1) - 2.0f*P(i, j) + P(i, j+1) ) \
                         - RHS(i, j);
@@ -438,9 +440,9 @@ void compute_uv(Matrix& U, Matrix& V, const Matrix& F, const Matrix& G, const Ma
             pijp = P(i, j+1);
             pipj = P(i+1, j);
 
-            if ( (domain(i, j).obstacle==false) && domain(i+1, j).obstacle==false )
+            if ( ((domain(i, j) & OBSTACLE) == 0) && (domain(i+1, j) & OBSTACLE) == 0 )
                 U(i, j) = F(i, j) - dtdx * (pipj - pij);
-            if ( (domain(i, j).obstacle==false) && domain(i, j+1).obstacle==false )
+            if ( ((domain(i, j) & OBSTACLE) == 0) && (domain(i, j+1) & OBSTACLE) == 0 )
                 V(i, j) = G(i, j) - dtdy * (pijp - pij);
         }
     }
@@ -458,7 +460,6 @@ void compute_uv(Matrix& U, Matrix& V, const Matrix& F, const Matrix& G, const Ma
     //     }
     // }
 };
-*/
 
 void get_parameters(const std::string& problem, Parameters& params, Constants& constants){
     if (problem == "inflow"){
