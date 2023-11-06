@@ -55,4 +55,6 @@ project "Fluid"
         "src/Message/**",
     }
 
+    buildoptions { "-mavx2" }
+
     links { "GLAD", "GLFW", "GLM" }

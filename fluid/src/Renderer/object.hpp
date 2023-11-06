@@ -1,12 +1,12 @@
 #pragma once
 #include <vector>
 #include <glm/glm.hpp>
-#include "Math/tensor.hpp"
+#include "Math/Matrix.hpp"
 
 struct Object {
     glm::vec3 position;
     glm::vec2 scale;
-    Tensor* tensor = nullptr;
+    Matrix* tensor = nullptr;
 };
 
 class Quad {

@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "Math/tensor.hpp"
+#include "Math/Matrix.hpp"
 
 struct Constants {
     int imax;
@@ -51,20 +51,20 @@ struct Parameters {
     float gamma;
 };
 
-void set_constant_flags(Domain&, int imax, int jmax);
+void set_constant_flags(Matrixi&, int imax, int jmax);
 
-void set_boundary_values(Tensor& U, Tensor& V, const Domain&, int imax, int jmax);
+void set_boundary_values(Matrix& U, Matrix& V, const Matrixi&, int imax, int jmax);
 
-void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax);
+void set_specific_boundary_values(Matrix& U, Matrix& V, int imax, int jmax);
 
-float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const Constants&);
+float adaptive_time_step_size( const Matrix& U, const Matrix& V, float dt, const Constants&);
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float gx, float gy, const Constants& cst);
+void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Matrixi& domain, float dt, float gx, float gy, const Constants& cst);
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dt, const Constants& c);
+void compute_rhs_pressure(Matrix& RHS, const Matrix& F, const Matrix& G, const Matrixi& domain, float dt, const Constants& c);
 
-void SOR(Tensor& P, const Tensor& RHS, const Domain&, float& rit, const Constants& p);
+void SOR(Matrix& P, const Matrix& RHS, const Matrixi&, float& rit, const Constants& p);
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Domain&, float dt, const Constants& cst);
+void compute_uv(Matrix& U, Matrix& V, const Matrix& F, const Matrix& G, const Matrix& P, const Matrixi&, float dt, const Constants& cst);
 
 void get_parameters(const std::string& problem, Parameters& params, Constants& constants);

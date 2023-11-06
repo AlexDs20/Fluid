@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "Math/tensor.hpp"
+#include "Math/Matrix.hpp"
 #include "Message/Message.hpp"
 #include "Physics/calculate.hpp"
 
@@ -14,12 +14,12 @@ public:
 public:
     Parameters params;
     Constants constants;
-    Tensor *U;
-    Tensor *V;
-    Tensor *P;
-    Tensor *F;
-    Tensor *G;
-    Tensor *RHS;
-    Domain *domain;
+    Matrix *U;
+    Matrix *V;
+    Matrix *P;
+    Matrix *F;
+    Matrix *G;
+    Matrix *RHS;
+    Matrixi *domain;
 };
 

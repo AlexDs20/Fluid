@@ -1,12 +1,12 @@
 #include <iostream>
 #include <cmath>
 #include <omp.h>
+#include "Math/Matrix.hpp"
 #include "Physics/calculate.hpp"
+#include "Physics/define.hpp"
 
-#include <immintrin.h>
 
-
-void set_constant_flags(Domain& domain, int imax, int jmax) {
+void set_constant_flags(Matrixi& domain, int imax, int jmax) {
     // Set the flags that do not change over time
     // Boundaries and sphere in the middle
     // Sphere info
@@ -18,13 +18,13 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
         for (int i=0; i<imax+2; i+=1) {
             // Above and Below
             if (i==0 || i==imax+1) {
-                domain(i, j).obstacle = true;
+                domain(i, j) = OBSTACLE;
             } else if (j==0 || j==jmax+1) {      // left / right
-                domain(i, j).obstacle = true;
+                domain(i, j) = OBSTACLE;
             } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
-                domain(i, j).obstacle = true;
+                domain(i, j) = OBSTACLE;
             } else {
-                domain(i, j).obstacle = false;
+                domain(i, j) = 0b0;
             }
         }
     }
@@ -32,25 +32,26 @@ void set_constant_flags(Domain& domain, int imax, int jmax) {
     // Set where the water is in the obstacle cells
     for (int j=0; j<jmax+2; ++j) {
         for (int i=0; i<imax+2; ++i) {
-            if (domain(i, j).obstacle) {
-                if (i<imax+1 & domain(i+1, j).obstacle == false){
-                    domain(i, j).E = true;
+            if (domain(i, j) == OBSTACLE) {
+                if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0)){
+                    domain(i, j) |= E;
                 }
-                if (i>0 & domain(i-1, j).obstacle == false){
-                    domain(i, j).W = true;
+                if ((i>0) & ((domain(i-1, j) & OBSTACLE) == 0)){
+                    domain(i, j) |= W;
                 }
-                if (j<jmax+1 & domain(i, j+1).obstacle == false){
-                    domain(i, j).N = true;
+                if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0)){
+                    domain(i, j) |= N;
                 }
-                if (j>0 & domain(i, j-1).obstacle == false){
-                    domain(i, j).S = true;
+                if ((j>0) & ((domain(i, j-1) & OBSTACLE) == 0)){
+                    domain(i, j) |= S;
                 }
             }
         }
     }
 };
 
-void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, int jmax) {
+/*
+void set_boundary_values(Matrix& U, Matrix& V, const Matrixi& domain, int imax, int jmax) {
     for (int j=0; j<jmax+2; ++j) {
         for (int i=0; i<imax+2; ++i) {
             if (domain(i, j).obstacle) {
@@ -104,7 +105,7 @@ void set_boundary_values(Tensor& U, Tensor& V, const Domain& domain, int imax, i
     }
 };
 
-void set_specific_boundary_values(Tensor& U, Tensor& V, int imax, int jmax) {
+void set_specific_boundary_values(Matrix& U, Matrix& V, int imax, int jmax) {
     // Outflow
     int n=0;
     for (int j=1; j!=jmax+1; ++j) {
@@ -136,7 +137,7 @@ __m256 fabs(const __m256& wide){
 };
 
 
-float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const Constants& c) {
+float adaptive_time_step_size( const Matrix& U, const Matrix& V, float dt, const Constants& c) {
     const float dx     = c.dx;
     const float dy     = c.dy;
     const float tau    = c.tau;
@@ -177,7 +178,7 @@ float adaptive_time_step_size( const Tensor& U, const Tensor& V, float dt, const
     return ret;
 };
 
-void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Domain& domain, float dt, float gx, float gy, const Constants& c) {
+void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Matrixi& domain, float dt, float gx, float gy, const Constants& c) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
 
@@ -317,7 +318,7 @@ void compute_FG(Tensor& F, Tensor& G, const Tensor& U, const Tensor& V, const Do
     }
 };
 
-void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const Domain& domain, float dt, const Constants& c) {
+void compute_rhs_pressure(Matrix& RHS, const Matrix& F, const Matrix& G, const Matrixi& domain, float dt, const Constants& c) {
     const int imax    = c.imax;
     const int jmax    = c.jmax;
     const float dxinv = c.dxinv;
@@ -334,7 +335,7 @@ void compute_rhs_pressure(Tensor& RHS, const Tensor& F, const Tensor& G, const D
     }
 };
 
-void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const Constants& c) {
+void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const Constants& c) {
     const int imax     = c.imax;
     const int jmax     = c.jmax;
     const float dxinv2 = c.dxdxinv;
@@ -342,7 +343,7 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const C
     const float omega  = c.omega;
     const float coeff  = c.coeff;
 
-    // static Tensor Pt({jmax+2, imax+2}, 0.0f);
+    // static Matrix Pt({jmax+2, imax+2}, 0.0f);
 
     // for (int j=0; j!=jmax+2; ++j)
     //     for (int i=0; i!=imax+2; ++i)
@@ -417,7 +418,7 @@ void SOR(Tensor& P, const Tensor& RHS, const Domain& domain, float& rit, const C
 };
 
 
-void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Tensor& P, const Domain& domain, float dt, const Constants& c) {
+void compute_uv(Matrix& U, Matrix& V, const Matrix& F, const Matrix& G, const Matrix& P, const Matrixi& domain, float dt, const Constants& c) {
     const int imax    = c.imax;
     const int jmax    = c.jmax;
     const float dxinv = c.dxinv;
@@ -457,6 +458,7 @@ void compute_uv(Tensor& U, Tensor& V, const Tensor& F, const Tensor& G, const Te
     //     }
     // }
 };
+*/
 
 void get_parameters(const std::string& problem, Parameters& params, Constants& constants){
     if (problem == "inflow"){
