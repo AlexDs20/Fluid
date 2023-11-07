@@ -60,45 +60,45 @@ void set_boundary_values(Matrix& U, Matrix& V, const Matrixi& domain, int imax, 
                 // TODO: check boundary type
                 //       Start with no slip
                 // U
-                if ((domain(i, j) & W) != 0) {
+                if ((domain(i, j) & W)) {
                     U(i-1, j) = 0;
                 } else {
-                    if ((domain(i, j) & N) != 0) {
+                    if ((domain(i, j) & N)) {
                         U(i-1, j) = -U(i-1, j+1);
                     }
-                    if ((domain(i, j) & S) != 0) {
+                    if ((domain(i, j) & S)) {
                         U(i-1, j) = -U(i-1, j-1);
                     }
                 }
-                if ((domain(i, j) & E) != 0) {
+                if ((domain(i, j) & E)) {
                     U(i, j) = 0;
                 } else {
-                    if ((domain(i, j) & N) != 0) {
+                    if ((domain(i, j) & N)) {
                         U(i, j) = -U(i, j+1);
                     }
-                    if ((domain(i, j) & S) != 0) {
+                    if ((domain(i, j) & S)) {
                         U(i, j) = -U(i, j-1);
                     }
                 }
 
                 // V
-                if ((domain(i, j) & N) != 0) {
+                if ((domain(i, j) & N)) {
                     V(i, j) = 0;
                 } else {
-                    if ((domain(i, j) & W) != 0) {
+                    if ((domain(i, j) & W)) {
                         V(i, j) = -V(i-1, j);
                     }
-                    if ((domain(i, j) & E) != 0) {
+                    if ((domain(i, j) & E)) {
                         V(i, j) = -V(i+1, j);
                     }
                 }
-                if ((domain(i, j) & S) != 0) {
+                if ((domain(i, j) & S)) {
                     V(i, j-1) = 0;
                 } else {
-                    if ((domain(i, j) & W) != 0) {
+                    if ((domain(i, j) & W)) {
                         V(i, j-1) = -V(i-1, j-1);
                     }
-                    if ((domain(i, j) & E) != 0) {
+                    if ((domain(i, j) & E)) {
                         V(i, j-1) = -V(i+1, j-1);
                     }
                 }
@@ -306,14 +306,14 @@ void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Ma
                     // 48?
                 }
             } else {
-                if ((domain(i, j) & N) != 0)
+                if ((domain(i, j) & N))
                     G(i, j) = V(i, j);
-                else if ((domain(i, j) & S) != 0)
+                else if ((domain(i, j) & S))
                     G(i, j-1) = V(i, j-1);
 
-                if ((domain(i, j) & W) != 0)
+                if ((domain(i, j) & W))
                     F(i-1, j) = U(i-1, j);
-                else if ((domain(i, j) & E) != 0)
+                else if ((domain(i, j) & E))
                     F(i, j) = U(i, j);
             }
         }
@@ -364,21 +364,21 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
             if (domain(i, j) & OBSTACLE) {
                 tmp_p = 0.0f;
                 edges = 0;
-                if ((domain(i, j) & N) != 0) {
+                if ((domain(i, j) & N)) {
                     // tmp_p += Pt(j+1, i);
                     tmp_p += P(i, j+1);
                     ++edges;
                 }
-                if ((domain(i, j) & S) != 0) {
+                if ((domain(i, j) & S)) {
                     // tmp_p += Pt(j-1, i);
                     tmp_p += P(i, j-1);
                     ++edges;
                 }
-                if ((domain(i, j) & E) != 0) {
+                if ((domain(i, j) & E)) {
                     tmp_p += P(i+1, j);
                     ++edges;
                 }
-                if ((domain(i, j) & W) != 0) {
+                if ((domain(i, j) & W)) {
                     tmp_p += P(i-1, j);
                     ++edges;
                 }
