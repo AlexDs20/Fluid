@@ -18,8 +18,11 @@ Fluid::Fluid(const std::string& problem, MessageBus* m): Sender(m) {
     domain = new Matrixi(params.imax+2, params.jmax+2, 0);
 
     // Set flags for edges and obstacle     (because obstacles don't move)
+    { Timer t;
     set_constant_flags(*domain, params.imax, params.jmax);                          // probably need the std::string problem here
-                                                                                    // Around 300 mus
+    }
+                                                                                    // Scalar: 220 -> 430 mus
+                                                                                    // Vector: 120 mus
 };
 
 Fluid::~Fluid(){

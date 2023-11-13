@@ -8,29 +8,88 @@
 #include <immintrin.h>
 
 
-void set_constant_flags(Matrixi& domain, int imax, int jmax) {
-    // Set the flags that do not change over time
-    // Boundaries and sphere in the middle
-    // Sphere info
-    const int px = imax / 5;
-    const int py = jmax / 2;
-    const float radius = std::min(imax, jmax) / 10.0f;
+// void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
+//     // Set the flags that do not change over time
+//     // Boundaries and sphere in the middle
+//     // Sphere info
+//     const int px = imax / 5;
+//     const int py = jmax / 2;
+//     const float radius = std::min(imax, jmax) / 10.0f;
+//
+//     for (int j=0; j<jmax+2; j+=1) {
+//         for (int i=0; i<imax+2; i+=1) {
+//             // Above and Below
+//             if (i==0 || i==imax+1) {
+//                 domain(i, j) = OBSTACLE;
+//             } else if (j==0 || j==jmax+1) {      // left / right
+//                 domain(i, j) = OBSTACLE;
+//             } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
+//                 domain(i, j) = OBSTACLE;
+//             } else {
+//                 domain(i, j) = 0b0;
+//             }
+//         }
+//     }
+// }
 
-    for (int j=0; j<jmax+2; j+=1) {
-        for (int i=0; i<imax+2; i+=1) {
-            // Above and Below
-            if (i==0 || i==imax+1) {
-                domain(i, j) = OBSTACLE;
-            } else if (j==0 || j==jmax+1) {      // left / right
-                domain(i, j) = OBSTACLE;
-            } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
-                domain(i, j) = OBSTACLE;
-            } else {
-                domain(i, j) = 0b0;
-            }
+__m256i WideIncrement(int i) {
+    __m256i increment = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+    __m256i index = _mm256_set1_epi32(i);
+    return _mm256_add_epi32(index, increment);
+};
+
+void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
+    int k = imax+2;
+    int l = jmax+2;
+    __m256 wide_px = _mm256_set1_ps((float)k/5);
+    __m256 wide_py = _mm256_set1_ps((float)l/2);
+    __m256 wide_r = _mm256_set1_ps((float)l/10);
+    wide_r = _mm256_mul_ps(wide_r, wide_r);
+
+    __m256i wide_zero = _mm256_set1_epi32(0);
+    __m256i wide_one  = _mm256_set1_epi32(1);
+    __m256i wide_lm1  = _mm256_set1_epi32(l-1);
+    __m256i wide_km1  = _mm256_set1_epi32(k-1);
+    for (int j=0; j<l; j++) {
+        // for j
+        __m256i wide_j      = _mm256_set1_epi32(j);
+        __m256i wide_j0     = _mm256_cmpeq_epi32(wide_j, wide_zero);            // j==0
+        __m256i wide_jlm1   = _mm256_cmpeq_epi32(wide_j, wide_lm1);             // j==l-1
+        __m256i wide_mask_j = _mm256_or_si256(wide_j0, wide_jlm1);              // associated mask
+
+        // Sphere
+        __m256 wide_sphere_j = _mm256_sub_ps(wide_py, _mm256_cvtepi32_ps(wide_j));  // (py-j)
+        wide_sphere_j        = _mm256_mul_ps(wide_sphere_j, wide_sphere_j);         // (py-j)*(py-j)
+
+        for (int i=0; i+7<k; i+=8) {
+            // for i
+            __m256i wide_i    = WideIncrement(i);                               // i, i+1, ..., i+7
+            __m256i wide_i0   = _mm256_cmpeq_epi32(wide_i, wide_zero);          // i==0
+            __m256i wide_ikm1 = _mm256_cmpeq_epi32(wide_i, wide_km1);           // i==k-1
+            __m256i wide_mask = _mm256_or_si256(wide_i0, wide_ikm1);            // mask
+
+            // Combine i and j masks
+            wide_mask = _mm256_or_si256(wide_mask, wide_mask_j);
+
+            // Sphere
+            __m256 wide_sphere_i = _mm256_sub_ps(wide_px, _mm256_cvtepi32_ps(wide_i));      // ([px]-[i])
+            __m256 wide_sphere = _mm256_mul_ps(wide_sphere_i, wide_sphere_i);
+            wide_sphere = _mm256_add_ps(wide_sphere, wide_sphere_j);            // [(px-i)] * [(px-i)] + [(py-j)*(py-j)]
+            __m256 sphere_mask = _mm256_cmp_ps(wide_sphere, wide_r, _CMP_LT_OS);
+
+            // Combine sphere mask and ij mask
+            wide_mask = _mm256_or_si256(wide_mask, _mm256_castps_si256(sphere_mask));
+
+            __m256i assign_value = _mm256_or_si256(
+                    _mm256_andnot_si256(wide_mask, wide_zero),
+                    _mm256_and_si256(wide_mask, wide_one));
+            int *adr = &domain(i, j);
+            _mm256_storeu_si256((__m256i*)adr, assign_value);
         }
     }
+};
 
+void set_fluid_flags(Matrixi& domain, int imax, int jmax) {
     // Set where the water is in the obstacle cells
     for (int j=0; j<jmax+2; ++j) {
         for (int i=0; i<imax+2; ++i) {
@@ -50,6 +109,11 @@ void set_constant_flags(Matrixi& domain, int imax, int jmax) {
             }
         }
     }
+};
+
+void set_constant_flags(Matrixi& domain, int imax, int jmax) {
+    set_obstacle_flags(domain, imax, jmax);
+    set_fluid_flags(domain, imax, jmax);
 };
 
 
