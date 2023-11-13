@@ -61,7 +61,7 @@ float adaptive_time_step_size(Matrix& U, Matrix& V, float dt, const Constants&);
 
 void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Matrixi& domain, float dt, float gx, float gy, const Constants& cst);
 
-void compute_rhs_pressure(Matrix& RHS, const Matrix& F, const Matrix& G, const Matrixi& domain, float dt, const Constants& c);
+void compute_rhs_pressure(Matrix& RHS, Matrix& F, Matrix& G, Matrixi& domain, float dt, const Constants& c);
 
 void SOR(Matrix& P, const Matrix& RHS, const Matrixi&, float& rit, const Constants& p);
 

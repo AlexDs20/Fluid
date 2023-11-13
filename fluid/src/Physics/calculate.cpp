@@ -360,19 +360,32 @@ void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Ma
     }
 };
 
-void compute_rhs_pressure(Matrix& RHS, const Matrix& F, const Matrix& G, const Matrixi& domain, float dt, const Constants& c) {
+void compute_rhs_pressure(Matrix& RHS, Matrix& F, Matrix& G, Matrixi& domain, float dt, const Constants& c) {
     const int imax    = c.imax;
     const int jmax    = c.jmax;
-    const float dxinv = c.dxinv;
-    const float dyinv = c.dyinv;
+    // const float dxinv = c.dxinv;
+    // const float dyinv = c.dyinv;
+    // const float dtinv = 1.0f / dt;
 
-    const float dtinv = 1.0f / dt;
+    wide_float dxinv(c.dxinv);
+    wide_float dyinv(c.dyinv);
+    wide_float dtinv(1.0f/dt);
 
     for (int j=0; j<jmax+2; ++j) {
-        for (int i=0; i<imax+2; ++i) {
-            if ((domain(i, j) & OBSTACLE) == 0) {
-                RHS(i, j) = dtinv * ( dxinv * ( F(i, j) - F(i-1, j) ) + dyinv * ( G(i, j) - G(i, j-1) ) );
-            }
+        for (int i=0; i+7<imax+2; i+=8) {
+            wide_int domij(&domain(i, j));
+            wide_float fij(&F(i, j));
+            wide_float fimj(&F(i-1, j));
+            wide_float gij(&G(i, j));
+            wide_float gijm(&G(i, j-1));
+
+            wide_float result;
+            result = dtinv * (dxinv * (fij - fimj) + dyinv * (gij - gijm));
+            StoreWideFloat(&RHS(i, j), result);
+
+            // if ((domain(i, j) & OBSTACLE) == 0) {
+            //     RHS(i, j) = dtinv * ( dxinv * ( F(i, j) - F(i-1, j) ) + dyinv * ( G(i, j) - G(i, j-1) ) );
+            // }
         }
     }
 };

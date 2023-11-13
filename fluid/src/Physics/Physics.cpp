@@ -45,6 +45,7 @@ void Fluid::update(){
                                                                                      // Vector: 25 -> 50
     compute_FG(*F, *G, *U, *V, *domain, dt, params.gx, params.gy, constants);        // 1100 -- 1500
     compute_rhs_pressure(*RHS, *F, *G, *domain, dt, constants);                      // 182 -- 215 mus
+                                                                                     // Vector: 75 -- 150 mus
 
     int it_max = 5;
     int it = 0;
@@ -55,4 +56,5 @@ void Fluid::update(){
     } while (it < it_max && rit > params.eps);
 
     compute_uv(*U, *V, *F, *G, *P, *domain, dt, constants);                          // 400 -- 670 mus
+                                                                                     // Vector: 125 -- 310
 };
