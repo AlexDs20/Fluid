@@ -23,14 +23,14 @@ float deltaTime = 0.0f;
 
 int main() {
     MessageBus messageBus;
-    // Renderer renderer(&messageBus);
-    // Input input(&messageBus, renderer.window);
+    Renderer renderer(&messageBus);
+    Input input(&messageBus, renderer.window);
     Console console;
     Fluid fluid("inflow", &messageBus);
 
     // messageBus.add_receiver(physics.read_message);
-    // messageBus.add_receiver(renderer.read_message);
-    // messageBus.add_receiver(input.read_message);
+    messageBus.add_receiver(renderer.read_message);
+    messageBus.add_receiver(input.read_message);
     messageBus.add_receiver(console.read_message);
 
     //--------------------
@@ -62,13 +62,13 @@ int main() {
     int n=0;
     while (running) {
         auto startFrameTime = std::chrono::system_clock::now();
-        // input.update();
-        // processInput(renderer.window);
+        input.update();
+        processInput(renderer.window);
 
         fluid.update();
 
-        // running = renderer.update(quads, fluid.constants.imax+2, fluid.constants.jmax+2);
-        // glfwPollEvents();
+        running = renderer.update(quads, fluid.constants.imax+2, fluid.constants.jmax+2);
+        glfwPollEvents();
 
         messageBus.dispatch();
 

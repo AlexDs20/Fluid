@@ -18,11 +18,9 @@ Fluid::Fluid(const std::string& problem, MessageBus* m): Sender(m) {
     domain = new Matrixi(params.imax+2, params.jmax+2, 0);
 
     // Set flags for edges and obstacle     (because obstacles don't move)
-    { Timer t;
     set_constant_flags(*domain, params.imax, params.jmax);                          // probably need the std::string problem here
-    }
                                                                                     // Scalar: 220 -> 430 mus
-                                                                                    // Vector: 120 mus
+                                                                                    // Vector: 100 mus
 };
 
 Fluid::~Fluid(){
@@ -40,10 +38,11 @@ Fluid::~Fluid(){
 // }
 void Fluid::update(){
     float dt;
-    set_boundary_values(*U, *V, *domain, constants.imax, constants.jmax);               // 70 -- 81 mus
+    set_boundary_values(*U, *V, *domain, constants.imax, constants.jmax);            // 70 -- 81 mus
     set_specific_boundary_values(*U, *V, constants.imax, constants.jmax);            // 4 mus
 
     dt = adaptive_time_step_size(*U, *V, params.dt_max, constants);                  // 95 -- 125 mus
+                                                                                     // Vector: 25 -> 50
     compute_FG(*F, *G, *U, *V, *domain, dt, params.gx, params.gy, constants);        // 1100 -- 1500
     compute_rhs_pressure(*RHS, *F, *G, *domain, dt, constants);                      // 182 -- 215 mus
 

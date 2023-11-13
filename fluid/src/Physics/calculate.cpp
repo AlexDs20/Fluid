@@ -4,109 +4,93 @@
 #include "Math/Matrix.hpp"
 #include "Physics/calculate.hpp"
 #include "Physics/define.hpp"
+#include "Math/simd.h"
 
-#include <immintrin.h>
-
-
-// void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
-//     // Set the flags that do not change over time
-//     // Boundaries and sphere in the middle
-//     // Sphere info
-//     const int px = imax / 5;
-//     const int py = jmax / 2;
-//     const float radius = std::min(imax, jmax) / 10.0f;
-//
-//     for (int j=0; j<jmax+2; j+=1) {
-//         for (int i=0; i<imax+2; i+=1) {
-//             // Above and Below
-//             if (i==0 || i==imax+1) {
-//                 domain(i, j) = OBSTACLE;
-//             } else if (j==0 || j==jmax+1) {      // left / right
-//                 domain(i, j) = OBSTACLE;
-//             } else if ( (px-i)*(px-i) + (py-j)*(py-j) < radius*radius) {    // Mark the sphere
-//                 domain(i, j) = OBSTACLE;
-//             } else {
-//                 domain(i, j) = 0b0;
-//             }
-//         }
-//     }
-// }
-
-__m256i WideIncrement(int i) {
-    __m256i increment = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
-    __m256i index = _mm256_set1_epi32(i);
-    return _mm256_add_epi32(index, increment);
-};
 
 void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
     int k = imax+2;
     int l = jmax+2;
-    __m256 wide_px = _mm256_set1_ps((float)k/5);
-    __m256 wide_py = _mm256_set1_ps((float)l/2);
-    __m256 wide_r = _mm256_set1_ps((float)l/10);
-    wide_r = _mm256_mul_ps(wide_r, wide_r);
+    wide_float px((float)k/5);
+    wide_float py((float)l/2);
+    wide_float r((float)l/10);
+    r *= r;
 
-    __m256i wide_zero = _mm256_set1_epi32(0);
-    __m256i wide_one  = _mm256_set1_epi32(1);
-    __m256i wide_lm1  = _mm256_set1_epi32(l-1);
-    __m256i wide_km1  = _mm256_set1_epi32(k-1);
+    wide_int zero(0);
+    wide_int obs(OBSTACLE);
+    wide_int lm1(l-1);
+    wide_int km1(k-1);
+
     for (int j=0; j<l; j++) {
         // for j
-        __m256i wide_j      = _mm256_set1_epi32(j);
-        __m256i wide_j0     = _mm256_cmpeq_epi32(wide_j, wide_zero);            // j==0
-        __m256i wide_jlm1   = _mm256_cmpeq_epi32(wide_j, wide_lm1);             // j==l-1
-        __m256i wide_mask_j = _mm256_or_si256(wide_j0, wide_jlm1);              // associated mask
+        wide_int wide_j(j);
+        wide_int wide_mask_j = (wide_j == zero) | (wide_j == lm1);
 
         // Sphere
-        __m256 wide_sphere_j = _mm256_sub_ps(wide_py, _mm256_cvtepi32_ps(wide_j));  // (py-j)
-        wide_sphere_j        = _mm256_mul_ps(wide_sphere_j, wide_sphere_j);         // (py-j)*(py-j)
+        wide_float wide_sphere_j = Square(py-wide_j);
 
         for (int i=0; i+7<k; i+=8) {
             // for i
-            __m256i wide_i    = WideIncrement(i);                               // i, i+1, ..., i+7
-            __m256i wide_i0   = _mm256_cmpeq_epi32(wide_i, wide_zero);          // i==0
-            __m256i wide_ikm1 = _mm256_cmpeq_epi32(wide_i, wide_km1);           // i==k-1
-            __m256i wide_mask = _mm256_or_si256(wide_i0, wide_ikm1);            // mask
+            wide_int wide_i = WideIndex(i);
+            wide_int wide_mask_i = (wide_i == 0) | (wide_i == km1);
 
             // Combine i and j masks
-            wide_mask = _mm256_or_si256(wide_mask, wide_mask_j);
+            wide_int wide_mask = wide_mask_j | wide_mask_i;
 
             // Sphere
-            __m256 wide_sphere_i = _mm256_sub_ps(wide_px, _mm256_cvtepi32_ps(wide_i));      // ([px]-[i])
-            __m256 wide_sphere = _mm256_mul_ps(wide_sphere_i, wide_sphere_i);
-            wide_sphere = _mm256_add_ps(wide_sphere, wide_sphere_j);            // [(px-i)] * [(px-i)] + [(py-j)*(py-j)]
-            __m256 sphere_mask = _mm256_cmp_ps(wide_sphere, wide_r, _CMP_LT_OS);
+            wide_int wide_sphere = (wide_sphere_j + Square(px - wide_i)) < r;
 
             // Combine sphere mask and ij mask
-            wide_mask = _mm256_or_si256(wide_mask, _mm256_castps_si256(sphere_mask));
+            wide_mask = wide_mask | wide_sphere;
 
-            __m256i assign_value = _mm256_or_si256(
-                    _mm256_andnot_si256(wide_mask, wide_zero),
-                    _mm256_and_si256(wide_mask, wide_one));
-            int *adr = &domain(i, j);
-            _mm256_storeu_si256((__m256i*)adr, assign_value);
+            wide_int assign_value(&domain(i, j));
+            ConditionalAssign(&assign_value, wide_mask, obs);
+
+            StoreWideInt(&domain(i, j), assign_value);
         }
     }
 };
 
 void set_fluid_flags(Matrixi& domain, int imax, int jmax) {
+    wide_int obs(OBSTACLE);
+    wide_int north(N);
+    wide_int south(S);
+    wide_int west(W);
+    wide_int east(E);
+
+    wide_int ip1(imax+1);
+    wide_int jp1(jmax+1);
+    wide_int zero(0);
+
     // Set where the water is in the obstacle cells
     for (int j=0; j<jmax+2; ++j) {
-        for (int i=0; i<imax+2; ++i) {
-            if (domain(i, j) == OBSTACLE) {
-                if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0)){
-                    domain(i, j) |= E;
-                }
-                if ((i>0) & ((domain(i-1, j) & OBSTACLE) == 0)){
-                    domain(i, j) |= W;
-                }
-                if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0)){
-                    domain(i, j) |= N;
-                }
-                if ((j>0) & ((domain(i, j-1) & OBSTACLE) == 0)){
-                    domain(i, j) |= S;
-                }
-            }
+        wide_int wide_j(j);
+
+        for (int i=0; i+7<imax+2; i+=8) {
+            wide_int wide_i = WideIndex(i);
+
+            wide_int domij(&domain(i, j));
+            wide_int domipj(&domain(i+1, j));
+            wide_int domimj(&domain(i-1, j));
+
+            // TODO(alex): HOW TO HANDLE THIS?! Go Over the domain size!?
+            wide_int domijp(&domain(i, j+1));
+            wide_int domijm(&domain(i, j-1));
+
+            wide_int mask = (domij == obs);
+            // North
+            wide_int mask_neighbour = ((wide_j<jp1) & ((domijp & obs) == zero));
+            domij |= (north & (mask & mask_neighbour));
+            // South
+            mask_neighbour = ((wide_j>0) & ((domijm & obs) == zero));
+            domij |= (south & (mask & mask_neighbour));
+            // West
+            mask_neighbour = ((wide_i > zero) & ((domimj & obs) == zero));
+            domij |= (west & (mask & mask_neighbour));
+            // East
+            mask_neighbour = ((wide_i < ip1) & ((domipj & obs) == zero));
+            domij |= (east & (mask & mask_neighbour));
+
+            StoreWideInt(&domain(i, j), domij);
         }
     }
 };
@@ -187,7 +171,7 @@ void set_specific_boundary_values(Matrix& U, Matrix& V, int imax, int jmax) {
 
     // Left: input flow
     const float u = 0.8;
-    const int width = 4;
+    const int width = 32;
     for (int j=(jmax-width)/2; j!=(jmax+width)/2;++j)
     {
         U(0, j) = u;
@@ -195,14 +179,7 @@ void set_specific_boundary_values(Matrix& U, Matrix& V, int imax, int jmax) {
 };
 
 
-__m256 fabs(const __m256& wide){
-    __m256i mask = _mm256_set1_epi32(0x7FFFFFFF);
-    mask = _mm256_and_si256(_mm256_castps_si256(wide), mask);
-    return _mm256_castsi256_ps(mask);
-};
-
-
-float adaptive_time_step_size( const Matrix& U, const Matrix& V, float dt, const Constants& c) {
+float adaptive_time_step_size(Matrix& U, Matrix& V, float dt, const Constants& c) {
     const float dx     = c.dx;
     const float dy     = c.dy;
     const float tau    = c.tau;
@@ -214,26 +191,25 @@ float adaptive_time_step_size( const Matrix& U, const Matrix& V, float dt, const
         return dt;
     }
 
-    __m256 wide_absu = _mm256_setzero_ps();
-    __m256 wide_absv = _mm256_setzero_ps();
+    wide_float absu(0.0f);
+    wide_float absv(0.0f);
 
     for (int j=0; j<jmax+2; ++j) {
         for (int i=0; i<imax+2; i+=8){
-            __m256 local_absu = fabs(_mm256_load_ps(&U(i, j)));
-            wide_absu = _mm256_max_ps(local_absu, wide_absu);
+            wide_float uij(&U(i, j));
+            wide_float vij(&V(i, j));
 
-            __m256 local_absv = fabs(_mm256_load_ps(&V(i, j)));
-            wide_absv = _mm256_max_ps(local_absv, wide_absv);
+            wide_float local_absu = Abs(uij);
+            wide_float local_absv = Abs(vij);
+
+            absu = Max(local_absu, absu);
+            absv = Max(local_absv, absv);
         }
     }
 
     // combine U and V maxes
-    float absumax=0;
-    float absvmax=0;
-    for (int i=0; i<8; i++) {
-        absumax = std::max(absumax, wide_absu[i]);
-        absvmax = std::max(absvmax, wide_absv[i]);
-    }
+    float absumax = HorizontalMax(absu);
+    float absvmax = HorizontalMax(absv);
 
     const float dt_v_max = std::min(dx / absumax, dy / absvmax);
 
@@ -484,7 +460,7 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
 };
 
 
-void compute_uv(Matrix& U, Matrix& V, const Matrix& F, const Matrix& G, const Matrix& P, const Matrixi& domain, float dt, const Constants& c) {
+void compute_uv(Matrix& U, Matrix& V, Matrix& F, Matrix& G, Matrix& P, Matrixi& domain, float dt, const Constants& c) {
     const int imax    = c.imax;
     const int jmax    = c.jmax;
     const float dxinv = c.dxinv;
@@ -493,36 +469,27 @@ void compute_uv(Matrix& U, Matrix& V, const Matrix& F, const Matrix& G, const Ma
     const float dtdx = dt * dxinv;
     const float dtdy = dt * dyinv;
 
-    float pipj;
-    float pij;
-    float pijp;
-
-
     for (int j=1; j!=jmax+1; ++j) {
-        for (int i=1; i!=imax+1; ++i) {
-            pij  = P(i, j);
-            pijp = P(i, j+1);
-            pipj = P(i+1, j);
+        for (int i=1; i+7<=imax+1; i+=8) {
+            wide_float pij(&P(i, j));
+            wide_float pijp(&P(i, j+1));
+            wide_float pipj(&P(i+1, j));
 
-            if ( ((domain(i, j) & OBSTACLE) == 0) && (domain(i+1, j) & OBSTACLE) == 0 )
-                U(i, j) = F(i, j) - dtdx * (pipj - pij);
-            if ( ((domain(i, j) & OBSTACLE) == 0) && (domain(i, j+1) & OBSTACLE) == 0 )
-                V(i, j) = G(i, j) - dtdy * (pijp - pij);
+            wide_int dij(&domain(i, j));
+            wide_int dipj(&domain(i+1, j));
+            wide_int dijp(&domain(i, j+1));
+            wide_float fij(&F(i, j));
+            wide_float gij(&G(i, j));
+
+            // U
+            wide_float result = fij - dtdx * (pipj - pij);
+            StoreWideFloat(&U(i, j), result);
+
+            // V
+            result = gij - dtdy * (pijp - pij);
+            StoreWideFloat(&V(i, j), result);
         }
     }
-
-    // for (int j=1; j!=jmax+1; ++j) {
-    //     for (int i=1; i!=imax+1; i+=8) {
-    //         __m256 wide_pij = _mm256_load_ps(&P(i, j));
-    //         __m256 wide_pijp = _mm256_setr_ps(P(i, j+1), P(i+1, j+1), P(i+2, j+1), P(i+3, j+1), P(i+4, j+1), P(i+5, j+1), P(i+6, j+1), P(i+7, j+1));
-    //         __m256 wide_pipj = _mm256_load_ps(&P(i+1, j));
-
-    //         if ( (domain(i, j).obstacle==false) && domain(i+1, j).obstacle==false )
-    //             U(i, j) = F(i, j) - dtdx * (pipj - pij);
-    //         if ( (domain(i, j).obstacle==false) && domain(i, j+1).obstacle==false )
-    //             V(i, j) = G(i, j) - dtdy * (pijp - pij);
-    //     }
-    // }
 };
 
 void get_parameters(const std::string& problem, Parameters& params, Constants& constants){

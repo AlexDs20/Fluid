@@ -150,6 +150,16 @@ operator|(wide_int A, int B) {
     wide_int ret = A | WideIntFromInt(B);
     return ret;
 }
+inline wide_int&
+operator|=(wide_int& A, wide_int B) {
+    A = A | B;
+    return A;
+}
+inline wide_int&
+operator|=(wide_int& A, int B) {
+    A |= WideIntFromInt(B);
+    return A;
+}
 
 inline wide_int
 operator&(wide_int A, wide_int B) {
@@ -542,6 +552,16 @@ operator|(wide_float A, float B) {
     wide_float ret = A | WideFloatFromFloat(B);
     return ret;
 }
+inline wide_float&
+operator|=(wide_float& A, wide_float B) {
+    A = A | B;
+    return A;
+}
+inline wide_float&
+operator|=(wide_float& A, float B) {
+    A |= WideFloatFromFloat(B);
+    return A;
+}
 
 inline wide_float
 operator&(wide_float A, wide_float B) {
@@ -560,32 +580,98 @@ operator&(wide_float A, float B) {
     return ret;
 }
 
+// MIXED
+inline wide_float
+operator-(wide_float A, wide_int B) {
+    wide_float ret;
+    ret.V = A.V - _mm256_cvtepi32_ps(B.V);
+    return ret;
+}
+inline wide_float
+operator-(wide_int A, wide_float B) {
+    wide_float ret;
+    ret.V = _mm256_cvtepi32_ps(A.V) - B.V;
+    return ret;
+}
+
+inline wide_float
+operator+(wide_float A, wide_int B) {
+    wide_float ret;
+    ret.V = A.V + _mm256_cvtepi32_ps(B.V);
+    return ret;
+}
+inline wide_float
+operator+(wide_int A, wide_float B) {
+    wide_float ret;
+    ret.V = _mm256_cvtepi32_ps(A.V) + B.V;
+    return ret;
+}
+
+inline wide_float
+operator*(wide_float A, wide_int B) {
+    wide_float ret;
+    ret.V = A.V * _mm256_cvtepi32_ps(B.V);
+    return ret;
+}
+inline wide_float
+operator*(wide_int A, wide_float B) {
+    wide_float ret;
+    ret.V = _mm256_cvtepi32_ps(A.V) * B.V;
+    return ret;
+}
+
+inline wide_float
+operator/(wide_float A, wide_int B) {
+    wide_float ret;
+    ret.V = A.V / _mm256_cvtepi32_ps(B.V);
+    return ret;
+}
+inline wide_float
+operator/(wide_int A, wide_float B) {
+    wide_float ret;
+    ret.V = _mm256_cvtepi32_ps(A.V) / B.V;
+    return ret;
+}
+
 // ---------
 // Functions
 // ---------
 inline wide_int
-min(wide_int A, wide_int B) {
+Min(wide_int A, wide_int B) {
     wide_int ret;
     ret.V = _mm256_min_epi32(A.V, B.V);
     return ret;
 }
 inline wide_float
-min(wide_float A, wide_float B) {
+Min(wide_float A, wide_float B) {
     wide_float ret;
     A.V = _mm256_min_ps(A.V, B.V);
     return ret;
 }
 
 inline wide_int
-max(wide_int A, wide_int B) {
+Max(wide_int A, wide_int B) {
     wide_int ret;
     ret.V = _mm256_max_epi32(A.V, B.V);
     return ret;
 }
 inline wide_float
-max(wide_float A, wide_float B) {
+Max(wide_float A, wide_float B) {
     wide_float ret;
-    A.V = _mm256_max_ps(A.V, B.V);
+    ret.V = _mm256_max_ps(A.V, B.V);
+    return ret;
+}
+
+inline wide_float
+Abs(wide_float A) {
+    wide_float ret;
+    ret.V = _mm256_andnot_ps(WideFloatFromFloat(-0.0f).V, A.V);
+    return ret;
+}
+inline wide_int
+Abs(wide_int A) {
+    wide_int ret;
+    ret.V = _mm256_abs_epi32(A.V);
     return ret;
 }
 
@@ -609,12 +695,49 @@ WideIndex(int A) {
 
 inline void
 ConditionalAssign(wide_float* A, wide_int mask, wide_float B){
-    A->V = _mm256_blendv_ps(B.V, A->V, _mm256_castsi256_ps(mask.V));
+    A->V = _mm256_blendv_ps(A->V, B.V, _mm256_castsi256_ps(mask.V));
 }
 
 inline void
 ConditionalAssign(wide_int* A, wide_int mask, wide_int B){
-    A->V = _mm256_blendv_epi8(B.V, A->V, mask.V);
+    A->V = _mm256_blendv_epi8(A->V, B.V, mask.V);
+}
+
+inline float
+HorizontalMax (wide_float A) {
+    float ret = *(float*)&A.V;
+    for (int i=1; i<8; i++) {
+        float v = *((float*)&A.V+i);
+        ret = ret>v ? ret : v;
+    }
+    return ret;
+}
+inline float
+HorizontalMin (wide_float A) {
+    float ret = *(float*)&A.V;
+    for (int i=1; i<8; i++) {
+        float v = *((float*)&A.V+i);
+        ret = ret<v ? ret : v;
+    }
+    return ret;
+}
+inline int
+HorizontalMax (wide_int A) {
+    int ret = *(int*)&A.V;
+    for (int i=1; i<8; i++) {
+        int v = *((int*)&A.V+i);
+        ret = ret>v ? ret : v;
+    }
+    return ret;
+}
+inline int
+HorizontalMin (wide_int A) {
+    int ret = *(int*)&A.V;
+    for (int i=1; i<8; i++) {
+        int v = *((int*)&A.V+i);
+        ret = ret<v ? ret : v;
+    }
+    return ret;
 }
 
 // SSE

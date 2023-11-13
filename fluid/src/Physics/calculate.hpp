@@ -57,7 +57,7 @@ void set_boundary_values(Matrix& U, Matrix& V, const Matrixi&, int imax, int jma
 
 void set_specific_boundary_values(Matrix& U, Matrix& V, int imax, int jmax);
 
-float adaptive_time_step_size( const Matrix& U, const Matrix& V, float dt, const Constants&);
+float adaptive_time_step_size(Matrix& U, Matrix& V, float dt, const Constants&);
 
 void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Matrixi& domain, float dt, float gx, float gy, const Constants& cst);
 
@@ -65,6 +65,6 @@ void compute_rhs_pressure(Matrix& RHS, const Matrix& F, const Matrix& G, const M
 
 void SOR(Matrix& P, const Matrix& RHS, const Matrixi&, float& rit, const Constants& p);
 
-void compute_uv(Matrix& U, Matrix& V, const Matrix& F, const Matrix& G, const Matrix& P, const Matrixi&, float dt, const Constants& cst);
+void compute_uv(Matrix& U, Matrix& V, Matrix& F, Matrix& G, Matrix& P, Matrixi&, float dt, const Constants& cst);
 
 void get_parameters(const std::string& problem, Parameters& params, Constants& constants);
