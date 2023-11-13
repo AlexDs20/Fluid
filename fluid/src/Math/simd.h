@@ -12,6 +12,10 @@
 #elif (LANE_WIDTH==8)
 struct wide_float {
     __m256 V;
+    wide_float(){};
+    wide_float(float);
+    wide_float(float*);
+    wide_float& operator=(float);
 };
 struct wide_int {
     __m256i V;
@@ -48,6 +52,8 @@ WideFloatFromInt(int A) {
     return ret;
 }
 
+//--------------
+// CONSTRUCTORS
 wide_int::wide_int(int A) {
     this->V = WideIntFromInt(A).V;
 }
@@ -56,6 +62,16 @@ wide_int::wide_int(int* A) {
 }
 wide_int& wide_int::operator=(int A) {
     this->V = WideIntFromInt(A).V;
+    return *this;
+}
+wide_float::wide_float(float A) {
+    this->V = WideFloatFromFloat(A).V;
+}
+wide_float::wide_float(float* A) {
+    this->V = _mm256_loadu_ps(A);
+}
+wide_float& wide_float::operator=(float A) {
+    this->V = WideFloatFromFloat(A).V;
     return *this;
 }
 
@@ -510,6 +526,39 @@ operator/=(wide_float& A, float B) {
     return A;
 }
 
+inline wide_float
+operator|(wide_float A, wide_float B) {
+    wide_float ret;
+    ret.V = _mm256_or_ps(A.V, B.V);
+    return ret;
+}
+inline wide_float
+operator|(float A, wide_float B) {
+    wide_float ret = WideFloatFromFloat(A) | B;
+    return ret;
+}
+inline wide_float
+operator|(wide_float A, float B) {
+    wide_float ret = A | WideFloatFromFloat(B);
+    return ret;
+}
+
+inline wide_float
+operator&(wide_float A, wide_float B) {
+    wide_float ret;
+    ret.V = _mm256_and_ps(A.V, B.V);
+    return ret;
+}
+inline wide_float
+operator&(float A, wide_float B) {
+    wide_float ret = WideFloatFromFloat(A) & B;
+    return ret;
+}
+inline wide_float
+operator&(wide_float A, float B) {
+    wide_float ret = A & WideFloatFromFloat(B);
+    return ret;
+}
 
 // ---------
 // Functions
@@ -557,6 +606,16 @@ WideIndex(int A) {
     ret.V = _mm256_add_epi32(_mm256_set1_epi32(A), _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7));
     return ret;
 };
+
+inline void
+ConditionalAssign(wide_float* A, wide_int mask, wide_float B){
+    A->V = _mm256_blendv_ps(B.V, A->V, _mm256_castsi256_ps(mask.V));
+}
+
+inline void
+ConditionalAssign(wide_int* A, wide_int mask, wide_int B){
+    A->V = _mm256_blendv_epi8(B.V, A->V, mask.V);
+}
 
 // SSE
 #elif (LANE_WIDTH==4)
