@@ -260,69 +260,49 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
     wide_float one, two, three, four, five, six;
 
     wide_int imp1(imax+1);
+    wide_int jmp(jmax+1);
 
     for (int j=0; j!=jmax+2; ++j) {
-        for (int i=0; i+7<imax+2; i+=8) {
-            wide_float uimj(U(i-1, j));
-            wide_float uimjp(U(i-1, j+1));
-            wide_float uijm(U(i,   j-1));
-            wide_float uij (U(i,   j));
-            wide_float uijp(U(i,   j+1));
-            wide_float uipj(U(i+1, j));
+        wide_int wide_j(j);
 
-            wide_float vimj(V(i-1, j));
-            wide_float vijm(V(i,   j-1));
-            wide_float vij (V(i,   j));
-            wide_float vijp(V(i,   j+1));
-            wide_float vipjm(V(i+1, j-1));
-            wide_float vipj(V(i+1, j));
+        for (int i=0; i+7<imax+2; i+=8) {
+            wide_float uimj(&U(i-1, j));
+            wide_float uimjp(&U(i-1, j+1));
+            wide_float uijm(&U(i,   j-1));
+            wide_float uij (&U(i,   j));
+            wide_float uijp(&U(i,   j+1));
+            wide_float uipj(&U(i+1, j));
+
+            wide_float vimj(&V(i-1, j));
+            wide_float vijm(&V(i,   j-1));
+            wide_float vij (&V(i,   j));
+            wide_float vijp(&V(i,   j+1));
+            wide_float vipjm(&V(i+1, j-1));
+            wide_float vipj(&V(i+1, j));
 
             wide_int domij(&domain(i, j));
+            wide_int domipj(&domain(i+1, j));
+            wide_int domijp(&domain(i, j+1));
             wide_int obs(OBSTACLE);
-            wide_int current_fluid_mask((domij & obs)==0);
-
-            wide_float fimj(&F(i-1, j));
-            wide_float gijm(&G(i, j-1));
 
             // if ((domain(i, j) & OBSTACLE) == 0) {
             //      if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0))    F(i, j) = ;
             //      if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0))    G(i, j) = ;
             // } else {
             //     if ((domain(i, j) & E))          F(i, j) = U(i, j);
-            //     else if ((domain(i, j) & W))     F(i-1, j) = U(i-1, j);
+            //     if ((domain(i, j) & W))     F(i-1, j) = U(i-1, j);
             //
             //     if ((domain(i, j) & N))          G(i, j) = V(i, j);
-            //     else if ((domain(i, j) & S))     G(i, j-1) = V(i, j-1);
+            //     if ((domain(i, j) & S))     G(i, j-1) = V(i, j-1);
             // }
 
-            // if ((domain(i, j) & OBSTACLE) != 0)
-            //     if ((domain(i, j) & W))     F(i-1, j) = U(i-1, j);
-            wide_int mask = ((domij&obs)!=0) & (domij & W);
-            ConditionalAssign(&fimj, mask, uimj);
-            StoreWideFloat(&F(i-1, j), fimj);
-
-            // if ((domain(i, j) & OBSTACLE) != 0)
-            //     if ((domain(i, j) & S))     G(i, j-1) = V(i, j-1);
-            mask = ((domij&obs)!=0) & (domij & S);
-            ConditionalAssign(&gijm, mask, vijm);
-            StoreWideFloat(&G(i, j-1), gijm);
-
-            // if ((domain(i, j) & OBSTACLE) != 0)
-            //     if ((domain(i, j) & E))          F(i, j) = U(i, j);
             wide_float fij(&F(i, j));
-            ConditionalAssign(&fij, ((domij&obs)!=0) & (domij & E), uij);
+            wide_int right_is_fluid_mask = ( (domij & obs) != 0) & ((domij & E)!=0);
+            ConditionalAssign(&fij, right_is_fluid_mask, uij);
 
-            // if ((domain(i, j) & OBSTACLE) != 0)
-            //     if ((domain(i, j) & N))          G(i, j) = V(i, j);
-            wide_float gij(&G(i, j));
-            ConditionalAssign(&gij, ((domij&obs)!=0) & (domij & N), vij);
-
-
-            // if ((domain(i, j) & OBSTACLE) == 0) {
-            //      if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0))
             wide_int wide_i = WideIndex(i);
-            wide_int domipj(&domain(i+1, j));
-            wide_int right_fluid_mask((wide_i < imp1) & ((domipj & OBSTACLE)==0));
+            wide_int imp(imax+1);
+            wide_int fluid_and_right_is_fluid = ( (domij & obs) == 0 ) & ( (wide_i < imp) & ((domipj & obs) == 0) );
 
             {
                 dudxdx = (uipj - 2.0f*uij + uimj) * dxinv2;
@@ -346,16 +326,24 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
                         + gammadyinv4 * ( Abs(one) * five -  Abs(three) * six );
                 // 17
                 wide_float result = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy + gx);
-                ConditionalAssign(&fij, current_fluid_mask & right_fluid_mask, result);
+                ConditionalAssign(&fij, fluid_and_right_is_fluid, result);
                 // 7
             }
 
-            wide_int wide_j(j);
-            wide_int domijp(&domain(i, j+1));
-            wide_int north_fluid_mask = ( (wide_j < (jmax+1)) & ((domijp & OBSTACLE) == 0) );
+            StoreWideFloat(&F(i, j), fij);
 
-            // if ((domain(i, j) & OBSTACLE) == 0) {
-            //      if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0))
+            wide_int left_is_fluid_mask = ( (domij & obs) != 0 ) & (domij & W);
+            wide_float fimj(&F(i-1, j));
+            ConditionalAssign(&fimj, left_is_fluid_mask, uimj);
+            StoreWideFloat(&F(i-1, j), fimj);
+
+
+            wide_float gij(&G(i, j));
+            wide_int north_is_fluid_mask = ( (domij & obs) != 0 ) & ((domij & N) != 0);
+            ConditionalAssign(&gij, north_is_fluid_mask, vij);
+
+            wide_int current_and_north_is_fluid = ( (domij & obs) == 0 ) & ( (wide_j < jmp) & ((domijp & obs)==0) );
+
             {
                 dvdxdx = (vipj - 2.0f*vij + vimj) * dxinv2;
                 dvdydy = (vijp - 2.0f*vij + vijm) * dyinv2;
@@ -378,11 +366,15 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
 
                 wide_float result;
                 result = vij + dt * (Reinv * (dvdxdx + dvdydy) - duvdx - dvvdy + gy );
-                ConditionalAssign(&gij, current_fluid_mask & north_fluid_mask, result);
+                ConditionalAssign(&gij, current_and_north_is_fluid, result);
             }
 
-            StoreWideFloat(&F(i, j), fij);
             StoreWideFloat(&G(i, j), gij);
+
+            wide_int south_is_fluid = ((domij & obs) != 0) & ((domij & S) != 0);
+            wide_float gijm(&G(i, j-1));
+            ConditionalAssign(&gijm, south_is_fluid, vijm);
+            StoreWideFloat(&G(i, j-1), gijm);
 
         }
     }
