@@ -220,7 +220,7 @@ float adaptive_time_step_size(Matrix& U, Matrix& V, float dt, const Constants& c
 };
 
 
-void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Matrixi& domain, float dt, float gx, float gy, const Constants& c) {
+void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, float dt, float gx, float gy, const Constants& c) {
     // F = u + dt * (1./Re * (dudxdx + dudydy) - duudx - duvdy + gx);       // i=1..imax-1 j=1..jmax
     // G = v + dt * (1./Re * (dvdxdx + dvdydy) - duvdx - dvvdy + gy);       // i=1..imax   j=1..jmax-1
 
@@ -246,116 +246,144 @@ void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Ma
     const float gammadyinv4 = c.gammadyinv4;
 
     // F
-    float dudxdx;
-    float dudydy;
-    float duudx;
-    float duvdy;
+    wide_float dudxdx;
+    wide_float dudydy;
+    wide_float duudx;
+    wide_float duvdy;
 
     // G
-    float dvdxdx;
-    float dvdydy;
-    float duvdx;
-    float dvvdy;
+    wide_float dvdxdx;
+    wide_float dvdydy;
+    wide_float duvdx;
+    wide_float dvvdy;
 
-    // U
-    float uijm;
-    float uij;
-    float uijp;
+    wide_float one, two, three, four, five, six;
 
-    float uimj;
-    float uimjp;
-    float uipj;
-
-    // V
-    float vijm;
-    float vij;
-    float vijp;
-
-    float vimj;
-    float vipjm;
-    float vipj;
-
-    float one, two, three, four, five, six;
+    wide_int imp1(imax+1);
 
     for (int j=0; j!=jmax+2; ++j) {
-        for (int i=0; i!=imax+2; ++i) {
-            if ((domain(i, j) & OBSTACLE) == 0) {
-                uimj = U(i-1, j);
-                uimjp= U(i-1, j+1);
-                uijm = U(i,   j-1);
-                uij  = U(i,   j);
-                uijp = U(i,   j+1);
-                uipj = U(i+1, j);
+        for (int i=0; i+7<imax+2; i+=8) {
+            wide_float uimj(U(i-1, j));
+            wide_float uimjp(U(i-1, j+1));
+            wide_float uijm(U(i,   j-1));
+            wide_float uij (U(i,   j));
+            wide_float uijp(U(i,   j+1));
+            wide_float uipj(U(i+1, j));
 
-                vimj = V(i-1, j);
-                vijm = V(i,   j-1);
-                vij  = V(i,   j);
-                vijp = V(i,   j+1);
-                vipjm= V(i+1, j-1);
-                vipj = V(i+1, j);
+            wide_float vimj(V(i-1, j));
+            wide_float vijm(V(i,   j-1));
+            wide_float vij (V(i,   j));
+            wide_float vijp(V(i,   j+1));
+            wide_float vipjm(V(i+1, j-1));
+            wide_float vipj(V(i+1, j));
 
-                if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0))
-                {
-                    dudxdx = (uipj - 2.0f*uij + uimj) * dxinv2;
-                    dudydy = (uijp - 2.0f*uij + uijm) * dyinv2;
+            wide_int domij(&domain(i, j));
+            wide_int obs(OBSTACLE);
+            wide_int current_fluid_mask((domij & obs)==0);
 
-                    one   = uij  + uipj;
-                    two   = uimj + uij;
-                    three = uij  - uipj;
-                    four  = uimj - uij;
-                    duudx =        dxinv4 * (      one  * one   -      two  * two )       \
-                            + gammadxinv4 * ( std::fabs(one) * three - std::fabs(two) * four );
-                    // 23
+            wide_float fimj(&F(i-1, j));
+            wide_float gijm(&G(i, j-1));
 
-                    one   = vij + vipj;
-                    two   = uij + uijp;
-                    three = vijm + vipjm;
-                    four  = uijm + uij;
-                    five = uij - uijp;
-                    six =  uijm - uij;
-                    duvdy =        dyinv4 * (      one  * two -        three  * four )      \
-                            + gammadyinv4 * ( std::fabs(one) * five -  std::fabs(three) * six );
-                    // 17
+            // if ((domain(i, j) & OBSTACLE) == 0) {
+            //      if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0))    F(i, j) = ;
+            //      if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0))    G(i, j) = ;
+            // } else {
+            //     if ((domain(i, j) & E))          F(i, j) = U(i, j);
+            //     else if ((domain(i, j) & W))     F(i-1, j) = U(i-1, j);
+            //
+            //     if ((domain(i, j) & N))          G(i, j) = V(i, j);
+            //     else if ((domain(i, j) & S))     G(i, j-1) = V(i, j-1);
+            // }
 
-                    F(i, j) = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy + gx);
-                    // 7
-                }
+            // if ((domain(i, j) & OBSTACLE) != 0)
+            //     if ((domain(i, j) & W))     F(i-1, j) = U(i-1, j);
+            wide_int mask = ((domij&obs)!=0) & (domij & W);
+            ConditionalAssign(&fimj, mask, uimj);
+            StoreWideFloat(&F(i-1, j), fimj);
 
-                if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0))
-                {
-                    dvdxdx = (vipj - 2.0f*vij + vimj) * dxinv2;
-                    dvdydy = (vijp - 2.0f*vij + vijm) * dyinv2;
+            // if ((domain(i, j) & OBSTACLE) != 0)
+            //     if ((domain(i, j) & S))     G(i, j-1) = V(i, j-1);
+            mask = ((domij&obs)!=0) & (domij & S);
+            ConditionalAssign(&gijm, mask, vijm);
+            StoreWideFloat(&G(i, j-1), gijm);
 
-                    one   = uij  + uijp;
-                    two   = vij  + vipj;
-                    three = uimj + uimjp;
-                    four  = vimj + vij;
-                    five  = vij  - vipj;
-                    six   = vimj - vij;
-                    duvdx =        dxinv4 * (      one  * two  -      three  * four)        \
-                            + gammadxinv4 * ( std::fabs(one) * five - std::fabs(three) * six );
+            // if ((domain(i, j) & OBSTACLE) != 0)
+            //     if ((domain(i, j) & E))          F(i, j) = U(i, j);
+            wide_float fij(&F(i, j));
+            ConditionalAssign(&fij, ((domij&obs)!=0) & (domij & E), uij);
 
-                    one   = vij  + vijp;
-                    three = vijm + vij;
-                    five  = vij  - vijp;
-                    six   = vijm - vij;
-                    dvvdy =        dyinv4 * (      one  * one  -      three  * three )      \
-                            + gammadyinv4 * ( std::fabs(one) * five - std::fabs(three) * six ) ;
+            // if ((domain(i, j) & OBSTACLE) != 0)
+            //     if ((domain(i, j) & N))          G(i, j) = V(i, j);
+            wide_float gij(&G(i, j));
+            ConditionalAssign(&gij, ((domij&obs)!=0) & (domij & N), vij);
 
-                    G(i, j) = vij + dt * (Reinv * (dvdxdx + dvdydy) - duvdx - dvvdy + gy );
-                    // 48?
-                }
-            } else {
-                if ((domain(i, j) & N))
-                    G(i, j) = V(i, j);
-                else if ((domain(i, j) & S))
-                    G(i, j-1) = V(i, j-1);
 
-                if ((domain(i, j) & W))
-                    F(i-1, j) = U(i-1, j);
-                else if ((domain(i, j) & E))
-                    F(i, j) = U(i, j);
+            // if ((domain(i, j) & OBSTACLE) == 0) {
+            //      if ((i<imax+1) & ((domain(i+1, j) & OBSTACLE) == 0))
+            wide_int wide_i = WideIndex(i);
+            wide_int domipj(&domain(i+1, j));
+            wide_int right_fluid_mask((wide_i < imp1) & ((domipj & OBSTACLE)==0));
+
+            {
+                dudxdx = (uipj - 2.0f*uij + uimj) * dxinv2;
+                dudydy = (uijp - 2.0f*uij + uijm) * dyinv2;
+
+                one   = uij  + uipj;
+                two   = uimj + uij;
+                three = uij  - uipj;
+                four  = uimj - uij;
+                duudx =        dxinv4 * (      one  * one   -      two  * two )       \
+                        + gammadxinv4 * ( Abs(one) * three - Abs(two) * four );
+                // 23
+
+                one   = vij + vipj;
+                two   = uij + uijp;
+                three = vijm + vipjm;
+                four  = uijm + uij;
+                five  = uij - uijp;
+                six   = uijm - uij;
+                duvdy = dyinv4 * (      one  * two -        three  * four )      \
+                        + gammadyinv4 * ( Abs(one) * five -  Abs(three) * six );
+                // 17
+                wide_float result = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy + gx);
+                ConditionalAssign(&fij, current_fluid_mask & right_fluid_mask, result);
+                // 7
             }
+
+            wide_int wide_j(j);
+            wide_int domijp(&domain(i, j+1));
+            wide_int north_fluid_mask = ( (wide_j < (jmax+1)) & ((domijp & OBSTACLE) == 0) );
+
+            // if ((domain(i, j) & OBSTACLE) == 0) {
+            //      if ((j<jmax+1) & ((domain(i, j+1) & OBSTACLE) == 0))
+            {
+                dvdxdx = (vipj - 2.0f*vij + vimj) * dxinv2;
+                dvdydy = (vijp - 2.0f*vij + vijm) * dyinv2;
+
+                one   = uij  + uijp;
+                two   = vij  + vipj;
+                three = uimj + uimjp;
+                four  = vimj + vij;
+                five  = vij  - vipj;
+                six   = vimj - vij;
+                duvdx =        dxinv4 * (      one  * two  -      three  * four)        \
+                        + gammadxinv4 * ( Abs(one) * five - Abs(three) * six );
+
+                one   = vij  + vijp;
+                three = vijm + vij;
+                five  = vij  - vijp;
+                six   = vijm - vij;
+                dvvdy =        dyinv4 * (      one  * one  -      three  * three )      \
+                        + gammadyinv4 * ( Abs(one) * five - Abs(three) * six ) ;
+
+                wide_float result;
+                result = vij + dt * (Reinv * (dvdxdx + dvdydy) - duvdx - dvvdy + gy );
+                ConditionalAssign(&gij, current_fluid_mask & north_fluid_mask, result);
+            }
+
+            StoreWideFloat(&F(i, j), fij);
+            StoreWideFloat(&G(i, j), gij);
+
         }
     }
 };

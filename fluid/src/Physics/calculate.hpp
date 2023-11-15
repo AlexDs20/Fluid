@@ -59,7 +59,7 @@ void set_specific_boundary_values(Matrix& U, Matrix& V, int imax, int jmax);
 
 float adaptive_time_step_size(Matrix& U, Matrix& V, float dt, const Constants&);
 
-void compute_FG(Matrix& F, Matrix& G, const Matrix& U, const Matrix& V, const Matrixi& domain, float dt, float gx, float gy, const Constants& cst);
+void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, float dt, float gx, float gy, const Constants& cst);
 
 void compute_rhs_pressure(Matrix& RHS, Matrix& F, Matrix& G, Matrixi& domain, float dt, const Constants& c);
 
