@@ -559,15 +559,16 @@ void test_wide_float() {
 }
 
 void test_wide_functions() {
-    if (1){
+    if (0) {
         int v[8] = {1, 2, 3, 4, 5, 6, 7, 8};
         int w[8] = {8, 7, 6, 5, 4, 3, 2, 1};
         wide_int A(v);
         wide_int B(w);
         wide_int C;
         wide_int D(A);
+        wide_int E(-A);
 
-        C = min(A, B);
+        C = Min(A, B);
         std::cout << "\n1, 2, 3, 4, 4, 3, 2, 1" << std::endl;
         print(C);
 
@@ -576,7 +577,7 @@ void test_wide_functions() {
         print(C);
         print(D);
 
-        C = max(A, B);
+        C = Max(A, B);
         std::cout << "\n8, 7, 6, 5, 5, 6, 7, 8" << std::endl;
         print(C);
 
@@ -593,5 +594,47 @@ void test_wide_functions() {
         C = WideIndex(3);
         std::cout << "\n3, 4, 5, 6, 7, 8, 9, 10" << std::endl;
         print(C);
+
+        std::cout << "\n>>\tABS" << std::endl;
+        print(E);
+        print(Abs(E));
+
+        std::cout << "\n>>\tHorizontalMax" << std::endl;
+        print(E);
+        std::cout << HorizontalMax(E) << std::endl;
+
+        std::cout << "\n>>\tHorizontalMin" << std::endl;
+        print(E);
+        std::cout << HorizontalMin(E) << std::endl;
+    }
+
+    if (1) {
+        float v[8] = {-1, 2, -3, 4, -5, 6, -7, 8};
+        float w[8] = {-8, 7, -6, 5, -4, 3, -2, 1};
+        float x[8] = {0, -1, -6, 5, -4, 3, -2, 1};
+        wide_float A(v);
+        wide_float B(w);
+        wide_float C;
+        wide_float D(x);
+
+        C = Abs(A);
+        print(A);
+        print(C);
+
+        std::cout << "\n>>\tABS" << std::endl;
+        print(D);
+        print(Abs(D));
+
+        std::cout << "\n>>\tMax" << std::endl;
+        print(Abs(D));
+        print(Max(D, Abs(D)));
+
+        std::cout << "\n>>\tHorizontalMax" << std::endl;
+        print(D);
+        std::cout << HorizontalMax(D) << std::endl;
+
+        std::cout << "\n>>\tHorizontalMin" << std::endl;
+        print(D);
+        std::cout << HorizontalMin(D) << std::endl;
     }
 }

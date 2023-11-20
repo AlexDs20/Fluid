@@ -40,8 +40,7 @@ void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
             wide_int wide_sphere = (wide_sphere_j + Square(px - wide_i)) < r;
 
             // Combine sphere mask and ij mask
-            wide_mask = wide_mask | wide_sphere;
-
+            wide_mask |= wide_sphere;
             wide_int assign_value(&domain(i, j));
             ConditionalAssign(&assign_value, wide_mask, obs);
 

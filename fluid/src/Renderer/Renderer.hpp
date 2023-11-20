@@ -42,9 +42,6 @@ public:
     }
 
     static void read_message(Message m){
-        if (m.e == SET_IMAX){
-        } else if (m.e == SET_JMAX) {
-        }
     };
 
     ~Renderer() {

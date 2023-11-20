@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include "glm/glm.hpp"
 
 #include "Message/Message.hpp"
@@ -8,9 +9,7 @@
 #include "Console/Console.hpp"
 
 #include "Renderer/utils.hpp"
-
-#include <chrono>
-
+#include "utils.hpp"
 
  unsigned int w = 1920;
  unsigned int h = 1080;
@@ -74,7 +73,7 @@ int main() {
 
         auto endFrameTime = std::chrono::system_clock::now();
         auto durationFrame = std::chrono::duration_cast<std::chrono::microseconds>(endFrameTime-startFrameTime).count();
-        // std::cout << durationFrame/1000. << " ms\t\r" << std::endl;
+        std::cout << durationFrame/1000. << " ms\t\r" << std::endl;
         deltaTime = durationFrame/1000000.;
         n++;
     };
