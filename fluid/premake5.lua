@@ -44,7 +44,10 @@ project "Fluid"
         "src/Message/",
         "src/Physics/",
         "src/Renderer/",
-        "deps/stb/"
+        "deps/stb/",
+        "deps/glad/include/",
+        "deps/glfw/include/",
+        "deps/glm/"
     }
 
     files {
