@@ -10,6 +10,37 @@
 // AVX2
 //======
 #elif (LANE_WIDTH==8)
+
+// https://www.youtube.com/watch?v=qejTqnxQRcw&t=7s
+// https://github.com/CppCon/CppCon2020/blob/main/Presentations/adventures_in_simd_thinking_part_1/adventures_in_simd_thinking_part_1__bob_steagall__cppcon_2020.pdf
+// typedef __m256 wide_float;
+// typedef __m256i wide_int;
+// wide_float load_value(float);
+// wide_float load_values(float a, float b, float c, float d, float e, float f, float g, float h);
+// wide_float load_from(float*);
+// wide_float masked_load_from(float*, float fill, wide_int mask);
+// wide_float masked_load_from(float*, wide_float fill, wide_int mask);
+// wide_float store_to(float*, wide_float v);
+// wide_float masked_store_to(float*, wide_float v, wide_int mask);
+// wide_int make_bit_mask();
+// wide_float blend(wide_float a, wide_float b, wide_int mask);
+// wide_float permute(wide_float a, wide_int perm);
+// // wide_float masked_permute(wide_float a, wide_float b, wide_int perm, wide_int mask);
+// wide_float make_perm_map();             // template<A...H>
+// wide_float rotate(wide_float a);        // template <int R>
+// wide_float rotate_down(wide_float a);
+// wide_float rotate_up(wide_float a);
+// wide_float shift(wide_float a);
+// wide_float shift_up(wide_float a);
+// wide_float shift_down(wide_float a);
+// wide_float shift_with_carry(wide_float a, wide_float b);
+// wide_float shift_up_with_carry(wide_float a, wide_float b);
+// wide_float shift_down_with_carry(wide_float a, wide_float b);
+// void inplace_shift_with_carry(wide_float& a, wide_float& b);
+// wide_float fmadd(wide_float a, wide_float b, wide_float c);
+// wide_float min(wide_float a, wide_float b);
+// wide_float max(wide_float a, wide_float b);
+
 struct wide_float {
     __m256 V;
     wide_float(){};
@@ -579,6 +610,22 @@ operator&(wide_float A, float B) {
     wide_float ret = A & WideFloatFromFloat(B);
     return ret;
 }
+inline wide_int
+operator^(wide_int A, wide_int B){
+    wide_int ret;
+    ret.V = _mm256_xor_si256(A.V, B.V);
+    return ret;
+}
+inline wide_float
+operator^(wide_float A, wide_float B){
+    wide_float ret;
+    ret.V = _mm256_xor_ps(A.V, B.V);
+    return ret;
+}
+inline wide_int
+operator~(wide_int A){
+    return A^wide_int(0xFFFFFFFF);
+};
 
 // MIXED
 inline wide_float
@@ -738,6 +785,106 @@ HorizontalMin (wide_int A) {
         ret = ret<v ? ret : v;
     }
     return ret;
+}
+
+template <int R>
+inline wide_int
+Rotate(wide_int IN) {
+    if constexpr ((R % 8) == 0)
+        return IN;
+
+    constexpr int S = (R > 0) ? (8 - (R % 8)) : -R;
+    constexpr int A = (S + 0) % 8;
+    constexpr int B = (S + 1) % 8;
+    constexpr int C = (S + 2) % 8;
+    constexpr int D = (S + 3) % 8;
+    constexpr int E = (S + 4) % 8;
+    constexpr int F = (S + 5) % 8;
+    constexpr int G = (S + 6) % 8;
+    constexpr int H = (S + 7) % 8;
+
+    wide_int ret;
+    ret.V = _mm256_permutevar8x32_epi32(IN.V, _mm256_setr_epi32(A,B,C,D,E,F,G,H));
+    return ret;
+}
+template <int R>
+inline wide_int
+RotateRight(wide_int IN) {
+    static_assert(R>=0);
+    return Rotate<R>(IN);
+}
+template <int R>
+inline wide_int
+RotateLeft(wide_int IN) {
+    static_assert(R>=0);
+    return Rotate<-R>(IN);
+}
+
+template <int R>
+inline wide_int
+MakeShiftMask(){
+    wide_int ret;
+    __m256i idx = _mm256_setr_epi32(0,1,2,3,4,5,6,7);
+    if (R>=0) {
+        ret.V = _mm256_cmpgt_epi32(idx, _mm256_set1_epi32(R-1));          // checks for idx > R-1
+    } else {
+        ret.V = _mm256_cmpgt_epi32(_mm256_set1_epi32(R+8), idx);
+    }
+    return ret;
+}
+template <int R>
+inline wide_int
+MakeRightShiftMask(){
+    static_assert(R>=0);
+    return MakeShiftMask<R>();
+}
+template <int R>
+inline wide_int
+MakeLeftShiftMask(){
+    static_assert(R<=0);
+    return MakeShiftMask<R>();
+}
+
+template <int R>
+inline wide_int
+Shift(wide_int IN) {
+    // rotates by R and set 0 instead of wrapping around
+    wide_int shift_mask = MakeShiftMask<R>();
+    wide_int rotated = Rotate<R>(IN);
+    ConditionalAssign(&rotated, shift_mask^wide_int(0xFFFFFFFF), shift_mask);
+    return rotated;
+}
+template <int R>
+inline wide_int
+LeftShift(wide_int IN) {
+    static_assert(R>=0);
+    return Shift<-R>(IN);
+}
+template <int R>
+inline wide_int
+RightShift(wide_int IN) {
+    static_assert(R>=0);
+    return Shift<R>(IN);
+}
+
+template <int R>
+inline wide_int
+ShiftWithCarry(wide_int A, wide_int B) {
+    wide_int ret = Rotate<R>(B);
+    ConditionalAssign(&ret, MakeShiftMask<R>(), Rotate<R>(A));
+    return ret;
+}
+template <int R>
+inline wide_int
+ShiftLeftWithCarry(wide_int A, wide_int B) {
+    static_assert(R<=0);
+    return ShiftWithCarry<R>(A, B);
+}
+template <int R>
+inline wide_int
+ShiftRightWithCarry(wide_int A, wide_int B) {
+    static_assert(R>=0);
+    return ShiftWithCarry<R>(A, B);
 }
 
 // SSE

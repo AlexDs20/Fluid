@@ -608,7 +608,7 @@ void test_wide_functions() {
         std::cout << HorizontalMin(E) << std::endl;
     }
 
-    if (1) {
+    if (0) {
         float v[8] = {-1, 2, -3, 4, -5, 6, -7, 8};
         float w[8] = {-8, 7, -6, 5, -4, 3, -2, 1};
         float x[8] = {0, -1, -6, 5, -4, 3, -2, 1};
@@ -636,5 +636,28 @@ void test_wide_functions() {
         std::cout << "\n>>\tHorizontalMin" << std::endl;
         print(D);
         std::cout << HorizontalMin(D) << std::endl;
+    }
+
+    if (1) {
+        int v[8] = {0,1,2,3,4,5,6,7};
+        int w[8] = {10,11,12,13,14,15,16,17};
+        wide_int A(v);
+        wide_int B(w);
+        print(Rotate<2>(A));
+        print(Rotate<-2>(A));
+        print(RotateRight<2>(A));
+        print(RotateLeft<2>(A));
+
+        print(MakeShiftMask<2>());
+        print(MakeShiftMask<-2>());
+        print(MakeLeftShiftMask<-2>());
+        print(MakeRightShiftMask<2>());
+        print(Shift<2>(A));
+        print(RightShift<2>(A));
+        print(Shift<-2>(A));
+        print(LeftShift<2>(A));
+
+        print(ShiftWithCarry<2>(A, B));
+        print(ShiftWithCarry<-2>(A, B));
     }
 }
