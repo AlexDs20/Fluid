@@ -109,6 +109,18 @@ wide_float& wide_float::operator=(float A) {
 //--------------
 // LOAD - STORE
 inline wide_int
+LoadInts(int a, int b, int c, int d, int e, int f, int g, int h){
+    wide_int ret;
+    ret.V = _mm256_setr_epi32(a,b,c,d,e,f,g,h);
+    return ret;
+}
+inline wide_float
+LoadFloats(float a, float b, float c, float d, float e, float f, float g, float h){
+    wide_float ret;
+    ret.V = _mm256_setr_ps(a,b,c,d,e,f,g,h);
+    return ret;
+}
+inline wide_int
 LoadPackedWideInt(int* A) {
     wide_int ret;
     ret.V = _mm256_loadu_si256((__m256i*)A);
@@ -380,7 +392,6 @@ operator*=(wide_int& A, int B) {
     A *= WideIntFromInt(B);
     return A;
 }
-
 
 //------------
 // WIDE_FLOAT
@@ -741,6 +752,13 @@ inline wide_int
 Abs(wide_int A) {
     wide_int ret;
     ret.V = _mm256_abs_epi32(A.V);
+    return ret;
+}
+
+inline wide_float
+Fmadd(wide_float a, wide_float b, wide_float c) {
+    wide_float ret;
+    ret.V = _mm256_fmadd_ps(a.V, b.V, c.V);
     return ret;
 }
 
