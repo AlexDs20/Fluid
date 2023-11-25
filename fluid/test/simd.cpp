@@ -28,14 +28,14 @@ void test_wide_float();
 void test_wide_functions();
 
 int main() {
-    // test_wide_int();
-    // test_wide_float();
+    test_wide_int();
+    test_wide_float();
     test_wide_functions();
 }
 
 void test_wide_int() {
     // Construct
-    if (0){
+    if (1){
         wide_int A(1);
         wide_int B = WideIntFromInt(1);
         wide_int C(B);
@@ -43,7 +43,7 @@ void test_wide_int() {
     }
     // Basic Arithmetic
     // +
-    if (0){
+    if (1){
         wide_int A(1);
         wide_int B(2);
         wide_int C;
@@ -64,7 +64,7 @@ void test_wide_int() {
         print(C);
     }
     // -
-    if (0){
+    if (1){
         wide_int A(1);
         wide_int B(2);
         wide_int C;
@@ -85,7 +85,7 @@ void test_wide_int() {
         print(C);
     }
     // *
-    if (0){
+    if (1){
         std::cout << "\n*" << std::endl;
         wide_int A(1);
         wide_int B(2);
@@ -107,7 +107,7 @@ void test_wide_int() {
         print(C);
     }
     // <
-    if (0){
+    if (1){
         std::cout << "\n<" << std::endl;
         int v[8] = {0, 1, 2, 3, 4, 5, 6, 7};
         int w[8] = {3, 3, 3, 3, 3, 3, 3, 3};
@@ -140,7 +140,7 @@ void test_wide_int() {
         print(C);
     }
     // >
-    if (0){
+    if (1){
         std::cout << "\n<" << std::endl;
         int v[8] = {0, 1, 2, 3, 4, 5, 6, 7};
         int w[8] = {3, 3, 3, 3, 3, 3, 3, 3};
@@ -173,7 +173,7 @@ void test_wide_int() {
         print(C);
     }
     // ==
-    if (0){
+    if (1){
         int v[8] = {1, 2, 1, 2, 1, 2, 1, 2};
         int w[8] = {2, 2, 2, 2, 2, 2, 2, 2};
         wide_int A(v);
@@ -197,7 +197,7 @@ void test_wide_int() {
         print(C);
     }
     // !=
-    if (0){
+    if (1){
         int v[8] = {1, 2, 1, 2, 1, 2, 1, 2};
         int w[8] = {2, 2, 2, 2, 2, 2, 2, 2};
         wide_int A(v);
@@ -221,7 +221,7 @@ void test_wide_int() {
         print(C);
     }
     // |
-    if (0){
+    if (1){
         int v[8] = {1, 2, 1, 2, 1, 2, 1, 2};
         int w[8] = {2, 2, 2, 2, 2, 2, 2, 2};
         wide_int A(v);
@@ -249,7 +249,7 @@ void test_wide_int() {
         print(C);
     }
     // &
-    if (0){
+    if (1){
         int v[8] = {1, 2, 1, 2, 1, 2, 1, 2};
         int w[8] = {2, 2, 2, 2, 2, 2, 2, 2};
         wide_int A(v);
@@ -559,7 +559,7 @@ void test_wide_float() {
 }
 
 void test_wide_functions() {
-    if (0) {
+    if (1) {
         int v[8] = {1, 2, 3, 4, 5, 6, 7, 8};
         int w[8] = {8, 7, 6, 5, 4, 3, 2, 1};
         wide_int A(v);
@@ -608,7 +608,7 @@ void test_wide_functions() {
         std::cout << HorizontalMin(E) << std::endl;
     }
 
-    if (0) {
+    if (1) {
         float v[8] = {-1, 2, -3, 4, -5, 6, -7, 8};
         float w[8] = {-8, 7, -6, 5, -4, 3, -2, 1};
         float x[8] = {0, -1, -6, 5, -4, 3, -2, 1};

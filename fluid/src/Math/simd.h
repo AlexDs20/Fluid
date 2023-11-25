@@ -11,41 +11,18 @@
 //======
 #elif (LANE_WIDTH==8)
 
-// https://www.youtube.com/watch?v=qejTqnxQRcw&t=7s
+// https://www.youtube.com/watch?v=qejTqnxQRcw
 // https://github.com/CppCon/CppCon2020/blob/main/Presentations/adventures_in_simd_thinking_part_1/adventures_in_simd_thinking_part_1__bob_steagall__cppcon_2020.pdf
+
 // typedef __m256 wfloat;
 // typedef __m256i wint;
-// wfloat load_value(float);
-// wfloat load_values(float a, float b, float c, float d, float e, float f, float g, float h);
-// wfloat load_from(float*);
-// wfloat masked_load_from(float*, float fill, wint mask);
-// wfloat masked_load_from(float*, wfloat fill, wint mask);
-// wfloat store_to(float*, wfloat v);
-// wfloat masked_store_to(float*, wfloat v, wint mask);
-// wint make_bit_mask();
-// wfloat blend(wfloat a, wfloat b, wint mask);
-// wfloat permute(wfloat a, wint perm);
-// // wfloat masked_permute(wfloat a, wfloat b, wint perm, wint mask);
-// wfloat make_perm_map();             // template<A...H>
-// wfloat rotate(wfloat a);        // template <int R>
-// wfloat rotate_down(wfloat a);
-// wfloat rotate_up(wfloat a);
-// wfloat shift(wfloat a);
-// wfloat shift_up(wfloat a);
-// wfloat shift_down(wfloat a);
-// wfloat shift_with_carry(wfloat a, wfloat b);
-// wfloat shift_up_with_carry(wfloat a, wfloat b);
-// wfloat shift_down_with_carry(wfloat a,  wfloat b);
-// void inplace_shift_with_carry(wfloat& a, wfloat& b);
-// wfloat fmadd(wfloat a, wfloat b, wfloat c);
-// wfloat min(wfloat a, wfloat b);
-// wfloat max(wfloat a, wfloat b);
 
 struct wide_float {
     __m256 V;
     wide_float(){};
     wide_float(float);
     wide_float(float*);
+    wide_float(__m256);
     wide_float& operator=(float);
 };
 struct wide_int {
@@ -53,6 +30,7 @@ struct wide_int {
     wide_int(){};
     wide_int(int);
     wide_int(int*);
+    wide_int(__m256i);
     wide_int& operator=(int);
 };
 
@@ -61,26 +39,19 @@ struct wide_int {
 // MAKE WIDE
 inline wide_float
 WideFloatFromFloat(float A){
-    wide_float ret;
-    ret.V = _mm256_set1_ps(A);
-    return ret;
+    return _mm256_set1_ps(A);
 }
 inline wide_int
 WideIntFromInt(int A){
-    wide_int ret;
-    ret.V = _mm256_set1_epi32(A);
-    return ret;
+    return _mm256_set1_epi32(A);
 }
 inline wide_float
 WideFloatFromWideInt(wide_int A) {
-    wide_float ret;
-    ret.V = _mm256_cvtepi32_ps(A.V);
-    return ret;
+    return _mm256_cvtepi32_ps(A.V);
 }
 inline wide_float
 WideFloatFromInt(int A) {
-    wide_float ret = WideFloatFromFloat((float) A);
-    return ret;
+    return WideFloatFromFloat((float) A);
 }
 
 //--------------
@@ -90,6 +61,9 @@ wide_int::wide_int(int A) {
 }
 wide_int::wide_int(int* A) {
     this->V = _mm256_loadu_si256((__m256i*)A);
+}
+wide_int::wide_int(__m256i A) {
+    this->V = A;
 }
 wide_int& wide_int::operator=(int A) {
     this->V = WideIntFromInt(A).V;
@@ -101,6 +75,9 @@ wide_float::wide_float(float A) {
 wide_float::wide_float(float* A) {
     this->V = _mm256_loadu_ps(A);
 }
+wide_float::wide_float(__m256 A) {
+    this->V = A;
+}
 wide_float& wide_float::operator=(float A) {
     this->V = WideFloatFromFloat(A).V;
     return *this;
@@ -110,39 +87,27 @@ wide_float& wide_float::operator=(float A) {
 // LOAD - STORE
 inline wide_int
 LoadInts(int a, int b, int c, int d, int e, int f, int g, int h){
-    wide_int ret;
-    ret.V = _mm256_setr_epi32(a,b,c,d,e,f,g,h);
-    return ret;
+    return _mm256_setr_epi32(a,b,c,d,e,f,g,h);
 }
 inline wide_float
 LoadFloats(float a, float b, float c, float d, float e, float f, float g, float h){
-    wide_float ret;
-    ret.V = _mm256_setr_ps(a,b,c,d,e,f,g,h);
-    return ret;
+    return _mm256_setr_ps(a,b,c,d,e,f,g,h);
 }
 inline wide_int
 LoadPackedWideInt(int* A) {
-    wide_int ret;
-    ret.V = _mm256_loadu_si256((__m256i*)A);
-    return ret;
+    return _mm256_loadu_si256((__m256i*)A);
 }
 inline wide_float
 LoadPackedWideFloat(float* A) {
-    wide_float ret;
-    ret.V = _mm256_loadu_ps(A);
-    return ret;
+    return _mm256_loadu_ps(A);
 }
 inline wide_int
 LoadMaskedPackedWideInt(int* A, wide_int mask) {
-    wide_int ret;
-    ret.V = _mm256_maskload_epi32(A, mask.V);
-    return ret;
+    return _mm256_maskload_epi32(A, mask.V);
 }
 inline wide_float
 LoadMaskedPackedWideFloat(float* A, wide_int mask) {
-    wide_float ret;
-    ret.V = _mm256_maskload_ps(A, mask.V);
-    return ret;
+    return _mm256_maskload_ps(A, mask.V);
 }
 inline void
 StoreWideInt(int* dest, wide_int source) {
@@ -167,53 +132,41 @@ StoreMaskedWideFloat(int* dest, wide_int mask, wide_int source){
 // WIDE_INT
 inline wide_int
 operator==(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_cmpeq_epi32(A.V, B.V);
-    return ret;
+    return _mm256_cmpeq_epi32(A.V, B.V);
 }
 inline wide_int
 operator==(int A, wide_int B) {
-    wide_int ret = (WideIntFromInt(A) == B);
-    return ret;
+    return (WideIntFromInt(A) == B);
 }
 inline wide_int
 operator==(wide_int A, int B) {
-    wide_int ret = (A == WideIntFromInt(B));
-    return ret;
+    return (A == WideIntFromInt(B));
 }
 
 inline wide_int
 operator!=(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_andnot_si256((A==B).V, _mm256_set1_epi32(0xFFFFFFFF));
-    return ret;
+    return _mm256_andnot_si256((A==B).V, _mm256_set1_epi32(0xFFFFFFFF));
 }
 inline wide_int
 operator!=(int A, wide_int B) {
-    wide_int ret = (WideIntFromInt(A)!=B);
-    return ret;
+    return (WideIntFromInt(A)!=B);
 }
 inline wide_int
 operator!=(wide_int A, int B) {
-    wide_int ret = (A!=WideIntFromInt(B));
-    return ret;
+    return (A!=WideIntFromInt(B));
 }
 
 inline wide_int
 operator|(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_or_si256(A.V, B.V);
-    return ret;
+    return _mm256_or_si256(A.V, B.V);
 }
 inline wide_int
 operator|(int A, wide_int B) {
-    wide_int ret = WideIntFromInt(A) | B;
-    return ret;
+    return WideIntFromInt(A) | B;
 }
 inline wide_int
 operator|(wide_int A, int B) {
-    wide_int ret = A | WideIntFromInt(B);
-    return ret;
+    return A | WideIntFromInt(B);
 }
 inline wide_int&
 operator|=(wide_int& A, wide_int B) {
@@ -228,52 +181,41 @@ operator|=(wide_int& A, int B) {
 
 inline wide_int
 operator&(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_and_si256(A.V, B.V);
-    return ret;
+    return _mm256_and_si256(A.V, B.V);
 }
 inline wide_int
 operator&(int A, wide_int B) {
-    wide_int ret = WideIntFromInt(A) & B;
-    return ret;
+    return WideIntFromInt(A) & B;
 }
 inline wide_int
 operator&(wide_int A, int B) {
-    wide_int ret = A & WideIntFromInt(B);
-    return ret;
+    return A & WideIntFromInt(B);
 }
 
 inline wide_int
 operator>(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_cmpgt_epi32(A.V, B.V);
-    return ret;
+    return _mm256_cmpgt_epi32(A.V, B.V);
 }
 inline wide_int
 operator>(int A, wide_int B) {
-    wide_int ret = WideIntFromInt(A)>B;
-    return ret;
+    return WideIntFromInt(A)>B;
 }
 inline wide_int
 operator>(wide_int A, int B) {
-    wide_int ret = A>WideIntFromInt(B);
-    return ret;
+    return A>WideIntFromInt(B);
 }
 
 inline wide_int
 operator>=(wide_int A, wide_int B) {
-    wide_int ret = (A > B) | (A == B);
-    return ret;
+    return (A > B) | (A == B);
 }
 inline wide_int
 operator>=(int A, wide_int B) {
-    wide_int ret = (WideIntFromInt(A)>=B);
-    return ret;
+    return (WideIntFromInt(A)>=B);
 }
 inline wide_int
 operator>=(wide_int A, int B) {
-    wide_int ret = (A>=WideIntFromInt(B));
-    return ret;
+    return (A>=WideIntFromInt(B));
 }
 
 inline wide_int
@@ -304,19 +246,15 @@ operator<=(wide_int A, int B) {
 
 inline wide_int
 operator+(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_add_epi32(A.V, B.V);
-    return ret;
+    return _mm256_add_epi32(A.V, B.V);
 }
 inline wide_int
 operator+(int A, wide_int B) {
-    wide_int ret = WideIntFromInt(A) + B;
-    return ret;
+    return WideIntFromInt(A) + B;
 }
 inline wide_int
 operator+(wide_int A, int B) {
-    wide_int ret = A + WideIntFromInt(B);
-    return ret;
+    return A + WideIntFromInt(B);
 }
 
 inline wide_int&
@@ -332,25 +270,19 @@ operator+=(wide_int& A, int B) {
 
 inline wide_int
 operator-(wide_int A) {
-    wide_int ret;
-    ret.V = 0 - A.V;
-    return ret;
+    return 0 - A.V;
 }
 inline wide_int
 operator-(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_sub_epi32(A.V, B.V);
-    return ret;
+    return _mm256_sub_epi32(A.V, B.V);
 }
 inline wide_int
 operator-(int A, wide_int B) {
-    wide_int ret = WideIntFromInt(A)-B;
-    return ret;
+    return WideIntFromInt(A)-B;
 }
 inline wide_int
 operator-(wide_int A, int B) {
-    wide_int ret = A-WideIntFromInt(B);
-    return ret;
+    return A-WideIntFromInt(B);
 }
 
 inline wide_int&
@@ -367,19 +299,15 @@ operator-=(wide_int& A, int B) {
 // NOTE(alex): This is darn slow, maybe we should never even do this on int
 inline wide_int
 operator*(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_mullo_epi32(A.V, B.V);
-    return ret;
+    return _mm256_mullo_epi32(A.V, B.V);
 }
 inline wide_int
 operator*(int A, wide_int B) {
-    wide_int ret = WideIntFromInt(A)*B;
-    return ret;
+    return WideIntFromInt(A)*B;
 }
 inline wide_int
 operator*(wide_int A, int B) {
-    wide_int ret = A*WideIntFromInt(B);
-    return ret;
+    return A*WideIntFromInt(B);
 }
 
 inline wide_int&
@@ -397,9 +325,7 @@ operator*=(wide_int& A, int B) {
 // WIDE_FLOAT
 inline wide_int
 operator>(wide_float A, wide_float B) {
-    wide_int ret;
-    ret.V = _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_GT_OQ));
-    return ret;
+    return _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_GT_OQ));
 }
 inline wide_int
 operator>(wide_float A, float B) {
@@ -412,9 +338,7 @@ operator>(float A, wide_float B) {
 
 inline wide_int
 operator>=(wide_float A, wide_float B) {
-    wide_int ret;
-    ret.V = _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_GE_OQ));
-    return ret;
+    return _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_GE_OQ));
 }
 inline wide_int
 operator>=(wide_float A, float B) {
@@ -427,9 +351,7 @@ operator>=(float A, wide_float B) {
 
 inline wide_int
 operator<(wide_float A, wide_float B) {
-    wide_int ret;
-    ret.V = _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_LT_OQ));
-    return ret;
+    return _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_LT_OQ));
 }
 inline wide_int
 operator<(wide_float A, float B) {
@@ -442,9 +364,7 @@ operator<(float A, wide_float B) {
 
 inline wide_int
 operator<=(wide_float A, wide_float B) {
-    wide_int ret;
-    ret.V = _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_LE_OQ));
-    return ret;
+    return _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_LE_OQ));
 }
 inline wide_int
 operator<=(wide_float A, float B) {
@@ -457,9 +377,7 @@ operator<=(float A, wide_float B) {
 
 inline wide_int
 operator==(wide_float A, wide_float B) {
-    wide_int ret;
-    ret.V = _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_EQ_OQ));
-    return ret;
+    return _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_EQ_OQ));
 }
 inline wide_int
 operator==(wide_float A, float B) {
@@ -472,9 +390,7 @@ operator==(float A, wide_float B) {
 
 inline wide_int
 operator!=(wide_float A, wide_float B) {
-    wide_int ret;
-    ret.V = _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_NEQ_OQ));
-    return ret;
+    return _mm256_castps_si256(_mm256_cmp_ps(A.V, B.V, _CMP_NEQ_OQ));
 }
 inline wide_int
 operator!=(wide_float A, float B) {
@@ -487,9 +403,7 @@ operator!=(float A, wide_float B) {
 
 inline wide_float
 operator+(wide_float A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_add_ps(A.V, B.V);
-    return ret;
+    return _mm256_add_ps(A.V, B.V);
 }
 inline wide_float
 operator+(wide_float A, float B) {
@@ -513,16 +427,12 @@ operator+=(wide_float& A, float B) {
 
 inline wide_float
 operator-(wide_float A) {
-    wide_float ret;
-    ret.V = 0 - A.V;
-    return ret;
+    return 0 - A.V;
 }
 
 inline wide_float
 operator-(wide_float A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_sub_ps(A.V, B.V);
-    return ret;
+    return _mm256_sub_ps(A.V, B.V);
 }
 inline wide_float
 operator-(float A, wide_float B) {
@@ -546,19 +456,15 @@ operator-=(wide_float& A, float B) {
 
 inline wide_float
 operator*(wide_float A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_mul_ps(A.V, B.V);
-    return ret;
+    return _mm256_mul_ps(A.V, B.V);
 }
 inline wide_float
 operator*(float A, wide_float B) {
-    wide_float ret = WideFloatFromFloat(A) * B;
-    return ret;
+    return WideFloatFromFloat(A) * B;
 }
 inline wide_float
 operator*(wide_float A, float B) {
-    wide_float ret = A * WideFloatFromFloat(B);
-    return ret;
+    return A * WideFloatFromFloat(B);
 }
 
 inline wide_float&
@@ -574,19 +480,15 @@ operator*=(wide_float& A, float B) {
 
 inline wide_float
 operator/(wide_float A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_div_ps(A.V, B.V);
-    return ret;
+    return _mm256_div_ps(A.V, B.V);
 }
 inline wide_float
 operator/(float A, wide_float B) {
-    wide_float ret = WideFloatFromFloat(A) / B;
-    return ret;
+    return WideFloatFromFloat(A) / B;
 }
 inline wide_float
 operator/(wide_float A, float B) {
-    wide_float ret = A / WideFloatFromFloat(B);
-    return ret;
+    return A / WideFloatFromFloat(B);
 }
 
 inline wide_float&
@@ -602,19 +504,15 @@ operator/=(wide_float& A, float B) {
 
 inline wide_float
 operator|(wide_float A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_or_ps(A.V, B.V);
-    return ret;
+    return _mm256_or_ps(A.V, B.V);
 }
 inline wide_float
 operator|(float A, wide_float B) {
-    wide_float ret = WideFloatFromFloat(A) | B;
-    return ret;
+    return WideFloatFromFloat(A) | B;
 }
 inline wide_float
 operator|(wide_float A, float B) {
-    wide_float ret = A | WideFloatFromFloat(B);
-    return ret;
+    return A | WideFloatFromFloat(B);
 }
 inline wide_float&
 operator|=(wide_float& A, wide_float B) {
@@ -629,31 +527,23 @@ operator|=(wide_float& A, float B) {
 
 inline wide_float
 operator&(wide_float A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_and_ps(A.V, B.V);
-    return ret;
+    return _mm256_and_ps(A.V, B.V);
 }
 inline wide_float
 operator&(float A, wide_float B) {
-    wide_float ret = WideFloatFromFloat(A) & B;
-    return ret;
+    return WideFloatFromFloat(A) & B;
 }
 inline wide_float
 operator&(wide_float A, float B) {
-    wide_float ret = A & WideFloatFromFloat(B);
-    return ret;
+    return A & WideFloatFromFloat(B);
 }
 inline wide_int
 operator^(wide_int A, wide_int B){
-    wide_int ret;
-    ret.V = _mm256_xor_si256(A.V, B.V);
-    return ret;
+    return _mm256_xor_si256(A.V, B.V);
 }
 inline wide_float
 operator^(wide_float A, wide_float B){
-    wide_float ret;
-    ret.V = _mm256_xor_ps(A.V, B.V);
-    return ret;
+    return _mm256_xor_ps(A.V, B.V);
 }
 inline wide_int
 operator~(wide_int A){
@@ -663,54 +553,38 @@ operator~(wide_int A){
 // MIXED
 inline wide_float
 operator-(wide_float A, wide_int B) {
-    wide_float ret;
-    ret.V = A.V - _mm256_cvtepi32_ps(B.V);
-    return ret;
+    return A.V - _mm256_cvtepi32_ps(B.V);
 }
 inline wide_float
 operator-(wide_int A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_cvtepi32_ps(A.V) - B.V;
-    return ret;
+    return _mm256_cvtepi32_ps(A.V) - B.V;
 }
 
 inline wide_float
 operator+(wide_float A, wide_int B) {
-    wide_float ret;
-    ret.V = A.V + _mm256_cvtepi32_ps(B.V);
-    return ret;
+    return A.V + _mm256_cvtepi32_ps(B.V);
 }
 inline wide_float
 operator+(wide_int A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_cvtepi32_ps(A.V) + B.V;
-    return ret;
+    return _mm256_cvtepi32_ps(A.V) + B.V;
 }
 
 inline wide_float
 operator*(wide_float A, wide_int B) {
-    wide_float ret;
-    ret.V = A.V * _mm256_cvtepi32_ps(B.V);
-    return ret;
+    return A.V * _mm256_cvtepi32_ps(B.V);
 }
 inline wide_float
 operator*(wide_int A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_cvtepi32_ps(A.V) * B.V;
-    return ret;
+    return _mm256_cvtepi32_ps(A.V) * B.V;
 }
 
 inline wide_float
 operator/(wide_float A, wide_int B) {
-    wide_float ret;
-    ret.V = A.V / _mm256_cvtepi32_ps(B.V);
-    return ret;
+    return A.V / _mm256_cvtepi32_ps(B.V);
 }
 inline wide_float
 operator/(wide_int A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_cvtepi32_ps(A.V) / B.V;
-    return ret;
+    return _mm256_cvtepi32_ps(A.V) / B.V;
 }
 
 // ---------
@@ -718,66 +592,48 @@ operator/(wide_int A, wide_float B) {
 // ---------
 inline wide_int
 Min(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_min_epi32(A.V, B.V);
-    return ret;
+    return _mm256_min_epi32(A.V, B.V);
 }
 inline wide_float
 Min(wide_float A, wide_float B) {
-    wide_float ret;
-    A.V = _mm256_min_ps(A.V, B.V);
-    return ret;
+    return _mm256_min_ps(A.V, B.V);
 }
 
 inline wide_int
 Max(wide_int A, wide_int B) {
-    wide_int ret;
-    ret.V = _mm256_max_epi32(A.V, B.V);
-    return ret;
+    return _mm256_max_epi32(A.V, B.V);
 }
 inline wide_float
 Max(wide_float A, wide_float B) {
-    wide_float ret;
-    ret.V = _mm256_max_ps(A.V, B.V);
-    return ret;
+    return _mm256_max_ps(A.V, B.V);
 }
 
 inline wide_float
 Abs(wide_float A) {
-    wide_float ret;
-    ret.V = _mm256_andnot_ps(WideFloatFromFloat(-0.0f).V, A.V);
-    return ret;
+    return _mm256_andnot_ps(WideFloatFromFloat(-0.0f).V, A.V);
 }
 inline wide_int
 Abs(wide_int A) {
-    wide_int ret;
-    ret.V = _mm256_abs_epi32(A.V);
-    return ret;
+    return _mm256_abs_epi32(A.V);
 }
 
 inline wide_float
 Fmadd(wide_float a, wide_float b, wide_float c) {
-    wide_float ret;
-    ret.V = _mm256_fmadd_ps(a.V, b.V, c.V);
-    return ret;
+    return _mm256_fmadd_ps(a.V, b.V, c.V);
 }
 
 inline wide_int
 Square(wide_int A){
-    wide_int ret = A*A;
-    return ret;
+    return A*A;
 }
 inline wide_float
 Square(wide_float A){
-    wide_float ret = A*A;
-    return ret;
+    return A*A;
 }
 
 inline wide_int
 WideIndex(int A) {
-    wide_int ret;
-    ret.V = _mm256_add_epi32(_mm256_set1_epi32(A), _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7));
-    return ret;
+    return _mm256_add_epi32(_mm256_set1_epi32(A), _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7));
 };
 
 inline void
@@ -833,19 +689,18 @@ Rotate(wide_int IN) {
     if constexpr ((R % 8) == 0)
         return IN;
 
-    constexpr int S = (R > 0) ? (8 - (R % 8)) : -R;
-    constexpr int A = (S + 0) % 8;
-    constexpr int B = (S + 1) % 8;
-    constexpr int C = (S + 2) % 8;
-    constexpr int D = (S + 3) % 8;
-    constexpr int E = (S + 4) % 8;
-    constexpr int F = (S + 5) % 8;
-    constexpr int G = (S + 6) % 8;
-    constexpr int H = (S + 7) % 8;
+    constexpr int V0 = (R > 0) ? (8 - (R % 8)) : -R;
+    constexpr int V1 = (V0 + 0) % 8;
+    constexpr int V2 = (V0 + 1) % 8;
+    constexpr int V3 = (V0 + 2) % 8;
+    constexpr int V4 = (V0 + 3) % 8;
+    constexpr int V5 = (V0 + 4) % 8;
+    constexpr int V6 = (V0 + 5) % 8;
+    constexpr int V7 = (V0 + 6) % 8;
+    constexpr int V8 = (V0 + 7) % 8;
 
-    wide_int ret;
-    ret.V = _mm256_permutevar8x32_epi32(IN.V, _mm256_setr_epi32(A,B,C,D,E,F,G,H));
-    return ret;
+    return _mm256_permutevar8x32_epi32(IN.V,
+            _mm256_setr_epi32(V1,V2,V3,V4,V5,V6,V7,V8));
 }
 template <int R>
 inline wide_int
@@ -863,14 +718,11 @@ RotateLeft(wide_int IN) {
 template <int R>
 inline wide_int
 MakeShiftMask(){
-    wide_int ret;
     const __m256i idx = _mm256_setr_epi32(0,1,2,3,4,5,6,7);
     if (R>=0) {
-        ret.V = _mm256_cmpgt_epi32(_mm256_set1_epi32(R), idx);          // checks for R > idx
-    } else {
-        ret.V = _mm256_cmpgt_epi32(idx, _mm256_set1_epi32(R+7));
+        return _mm256_cmpgt_epi32(_mm256_set1_epi32(R), idx);          // checks for R > idx
     }
-    return ret;
+    return _mm256_cmpgt_epi32(idx, _mm256_set1_epi32(R+7));
 }
 template <int R>
 inline wide_int
