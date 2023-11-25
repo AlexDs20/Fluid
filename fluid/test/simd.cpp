@@ -639,19 +639,20 @@ void test_wide_functions() {
     }
 
     if (1) {
-        int v[8] = {0,1,2,3,4,5,6,7};
-        int w[8] = {10,11,12,13,14,15,16,17};
+        int v[8] = {1,2,3,4,5,6,7,8};
+        int w[8] = {9,10,11,12,13,14,15,16};
         wide_int A(v);
         wide_int B(w);
+
         print(Rotate<2>(A));
-        print(Rotate<-2>(A));
         print(RotateRight<2>(A));
+        print(Rotate<-2>(A));
         print(RotateLeft<2>(A));
 
         print(MakeShiftMask<2>());
-        print(MakeShiftMask<-2>());
-        print(MakeLeftShiftMask<-2>());
         print(MakeRightShiftMask<2>());
+        print(MakeShiftMask<-2>());
+        print(MakeLeftShiftMask<2>());
         print(Shift<2>(A));
         print(RightShift<2>(A));
         print(Shift<-2>(A));
@@ -659,5 +660,14 @@ void test_wide_functions() {
 
         print(ShiftWithCarry<2>(A, B));
         print(ShiftWithCarry<-2>(A, B));
+        print(ShiftRightWithCarry<2>(A, B));
+        print(ShiftLeftWithCarry<2>(A, B));
+
+        print(LoadMaskedPackedWideInt(v, MakeShiftMask<7>()));
+        print(LoadMaskedPackedWideInt(v, MakeShiftMask<-7>()));
+
+        float f[8] = {1,2,3,4,5,6,7,8};
+        print(LoadMaskedPackedWideFloat(f, MakeShiftMask<7>()));
+        print(LoadMaskedPackedWideFloat(f, MakeShiftMask<-7>()));
     }
 }
