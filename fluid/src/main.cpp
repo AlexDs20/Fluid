@@ -64,7 +64,9 @@ int main() {
         input.update();
         processInput(renderer.window);
 
+        { Timer t;
         fluid.update();
+        }
 
         running = renderer.update(quads, fluid.constants.imax+2, fluid.constants.jmax+2);
         glfwPollEvents();
@@ -73,7 +75,7 @@ int main() {
 
         auto endFrameTime = std::chrono::system_clock::now();
         auto durationFrame = std::chrono::duration_cast<std::chrono::microseconds>(endFrameTime-startFrameTime).count();
-        std::cout << durationFrame/1000. << " ms\t\r" << std::endl;
+        // std::cout << durationFrame/1000. << " ms\t\r" << std::endl;
         deltaTime = durationFrame/1000000.;
         n++;
     };

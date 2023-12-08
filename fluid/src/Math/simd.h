@@ -123,7 +123,7 @@ StoreMaskedWideFloat(float* dest, wide_int mask, wide_float source){
     _mm256_maskstore_ps(dest, mask.V, source.V);
 }
 inline void
-StoreMaskedWideFloat(int* dest, wide_int mask, wide_int source){
+StoreMaskedWideInt(int* dest, wide_int mask, wide_int source){
     // if mask -> then save
     _mm256_maskstore_epi32(dest, mask.V, source.V);
 }

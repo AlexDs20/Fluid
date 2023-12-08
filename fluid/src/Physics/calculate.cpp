@@ -8,17 +8,16 @@
 
 
 void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
-    int k = imax+2;
-    int l = jmax+2;
-    wide_float px((float)k/5);
-    wide_float py((float)l/2);
-    wide_float r((float)l/10);
-    r *= r;
+    const int k = imax+2;
+    const int l = jmax+2;
+    const wide_float px((float)k/5);
+    const wide_float py((float)l/2);
+    const wide_float r((float) l*l/100);
 
-    wide_int zero(0);
-    wide_int obs(OBSTACLE);
-    wide_int lm1(l-1);
-    wide_int km1(k-1);
+    const wide_int zero(0);
+    const wide_int obs(OBSTACLE);
+    const wide_int lm1(l-1);
+    const wide_int km1(k-1);
 
     for (int j=0; j<l; j++) {
         // for j
@@ -50,15 +49,15 @@ void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
 };
 
 void set_fluid_flags(Matrixi& domain, int imax, int jmax) {
-    wide_int obs(OBSTACLE);
-    wide_int north(N);
-    wide_int south(S);
-    wide_int west(W);
-    wide_int east(E);
+    const wide_int obs(OBSTACLE);
+    const wide_int north(N);
+    const wide_int south(S);
+    const wide_int west(W);
+    const wide_int east(E);
 
-    wide_int ip1(imax+1);
-    wide_int jp1(jmax+1);
-    wide_int zero(0);
+    const wide_int ip1(imax+1);
+    const wide_int jp1(jmax+1);
+    const wide_int zero(0);
 
     // Set where the water is in the obstacle cells
     for (int j=0; j<jmax+2; ++j) {
@@ -68,10 +67,16 @@ void set_fluid_flags(Matrixi& domain, int imax, int jmax) {
             wide_int wide_i = WideIndex(i);
 
             wide_int domij(&domain(i, j));
-            wide_int domipj(&domain(i+1, j));
-            wide_int domimj(&domain(i-1, j));
 
             // TODO(alex): HOW TO HANDLE THIS?! Go Over the domain size!?
+            if (endi) {
+                wide_int ip1mask = LoadInts(-1,-1,-1,-1,-1,-1,-1,0);
+                wide_int domipj = LoadMaskedPackedWideInt(&domain(i+1, j), ip1mask);
+            } else {
+                wide_int domipj(&domain(i+1, j));
+            }
+            wide_int domimj(&domain(i-1, j));
+
             wide_int domijp(&domain(i, j+1));
             wide_int domijm(&domain(i, j-1));
 
