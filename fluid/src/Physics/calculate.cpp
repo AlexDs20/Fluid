@@ -1,6 +1,5 @@
 #include <iostream>
 #include <cmath>
-#include <omp.h>
 #include "Math/Matrix.hpp"
 #include "Physics/calculate.hpp"
 #include "Physics/define.hpp"
@@ -10,14 +9,15 @@
 void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
     const int k = imax+2;
     const int l = jmax+2;
-    const wide_float px((float)k/5);
-    const wide_float py((float)l/2);
-    const wide_float r((float) l*l/100);
+    const wide_float px((float)k/5.0f);
+    const wide_float py((float)l/2.0f);
+    const wide_float r2((float) l*l/100.0f);
 
     const wide_int zero(0);
     const wide_int obs(OBSTACLE);
     const wide_int lm1(l-1);
     const wide_int km1(k-1);
+
 
     for (int j=0; j<l; j++) {
         // for j
@@ -27,7 +27,7 @@ void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
         // Sphere
         wide_float wide_sphere_j = Square(py-wide_j);
 
-        for (int i=0; i+7<k; i+=8) {
+        for (int i=0; i<k; i+=LANE_WIDTH) {
             // for i
             wide_int wide_i = WideIndex(i);
             wide_int wide_mask_i = (wide_i == 0) | (wide_i == km1);
@@ -36,7 +36,7 @@ void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
             wide_int wide_mask = wide_mask_j | wide_mask_i;
 
             // Sphere
-            wide_int wide_sphere = (wide_sphere_j + Square(px - wide_i)) < r;
+            wide_int wide_sphere = (wide_sphere_j + Square(px - wide_i)) < r2;
 
             // Combine sphere mask and ij mask
             wide_mask |= wide_sphere;
@@ -60,40 +60,37 @@ void set_fluid_flags(Matrixi& domain, int imax, int jmax) {
     const wide_int zero(0);
 
     // Set where the water is in the obstacle cells
-    for (int j=0; j<jmax+2; ++j) {
+    for (int j=0; j<jmax+2; j++) {
         wide_int wide_j(j);
 
-        for (int i=0; i+7<imax+2; i+=8) {
+        for (int i=0; i<imax+2; i+=LANE_WIDTH) {
             wide_int wide_i = WideIndex(i);
 
             wide_int domij(&domain(i, j));
 
-            // // TODO(alex): HOW TO HANDLE THIS?! Go Over the domain size!?
-            // if (endi) {
-            //     wide_int ip1mask = LoadInts(-1,-1,-1,-1,-1,-1,-1,0);
-            //     wide_int domipj = LoadMaskedPackedWideInt(&domain(i+1, j), ip1mask);
-            // } else {
-                wide_int domipj(&domain(i+1, j));
-            // }
-            wide_int domimj(&domain(i-1, j));
+            // TODO: Do it smart by loading the i lanes only once and doing a
+            //  left or right shift to get the +1, -1
+            wide_int domipj = LoadMaskedPackedWideInt(&domain(i+1, j), wide_i<ip1);
+            wide_int domimj = LoadMaskedPackedWideInt(&domain(i-1, j), wide_i>0);
+            wide_int domijp = LoadMaskedPackedWideInt(&domain(i, j+1), wide_j<jp1);
+            wide_int domijm = LoadMaskedPackedWideInt(&domain(i, j-1), wide_j>0);
 
-            wide_int domijp(&domain(i, j+1));
-            wide_int domijm(&domain(i, j-1));
-
-            wide_int mask = (domij == obs);
+            wide_int maskCurrentIsObs = (domij == obs);
+            wide_int maskNextIsNotObs;
             // North
-            wide_int mask_neighbour = ((wide_j<jp1) & ((domijp & obs) == zero));
-            domij |= (north & (mask & mask_neighbour));
+            maskNextIsNotObs = (domijp & obs) == zero;
+            domij |= (north & (maskCurrentIsObs & maskNextIsNotObs));
             // South
-            mask_neighbour = ((wide_j>0) & ((domijm & obs) == zero));
-            domij |= (south & (mask & mask_neighbour));
+            maskNextIsNotObs = (domijm & obs) == zero;
+            domij |= (south & (maskCurrentIsObs & maskNextIsNotObs));
             // West
-            mask_neighbour = ((wide_i > zero) & ((domimj & obs) == zero));
-            domij |= (west & (mask & mask_neighbour));
+            maskNextIsNotObs = (domimj & obs) == zero;
+            domij |= (west & (maskCurrentIsObs & maskNextIsNotObs));
             // East
-            mask_neighbour = ((wide_i < ip1) & ((domipj & obs) == zero));
-            domij |= (east & (mask & mask_neighbour));
+            maskNextIsNotObs = (domipj & obs) == zero;
+            domij |= (east & (maskCurrentIsObs & maskNextIsNotObs));
 
+            // This should be adjusted if k or l % LANE_WIDTH != 0 ! otherwise write outside
             StoreWideInt(&domain(i, j), domij);
         }
     }
@@ -198,8 +195,8 @@ float adaptive_time_step_size(Matrix& U, Matrix& V, float dt, const Constants& c
     wide_float absu(0.0f);
     wide_float absv(0.0f);
 
-    for (int j=0; j<jmax+2; ++j) {
-        for (int i=0; i<imax+2; i+=8){
+    for (int j=0; j<jmax+2; j++) {
+        for (int i=0; i<imax+2; i+=LANE_WIDTH){
             wide_float uij(&U(i, j));
             wide_float vij(&V(i, j));
 
@@ -262,31 +259,34 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
     wide_float dvvdy;
 
     wide_float one, two, three, four, five, six;
+    wide_int zero(0);
 
     wide_int imp1(imax+1);
-    wide_int jmp(jmax+1);
+    wide_int jmp1(jmax+1);
 
-    for (int j=0; j!=jmax+2; ++j) {
+    for (int j=0; j<jmax+2; j++) {
         wide_int wide_j(j);
 
-        for (int i=0; i+7<imax+2; i+=8) {
-            wide_float uimj(&U(i-1, j));
-            wide_float uimjp(&U(i-1, j+1));
-            wide_float uijm(&U(i,   j-1));
-            wide_float uij (&U(i,   j));
-            wide_float uijp(&U(i,   j+1));
-            wide_float uipj(&U(i+1, j));
+        for (int i=0; i<imax+2; i+=LANE_WIDTH) {
+            wide_int wide_i = WideIndex(i);
 
-            wide_float vimj(&V(i-1, j));
-            wide_float vijm(&V(i,   j-1));
-            wide_float vij (&V(i,   j));
-            wide_float vijp(&V(i,   j+1));
-            wide_float vipjm(&V(i+1, j-1));
-            wide_float vipj(&V(i+1, j));
+            wide_float uimj = LoadMaskedPackedWideFloat(&U(i-1, j), wide_i>zero);
+            wide_float uimjp = LoadMaskedPackedWideFloat(&U(i-1, j+1), (wide_i>zero) & (wide_j<jmp1));
+            wide_float uijm = LoadMaskedPackedWideFloat(&U(i, j-1), wide_j>zero);
+            wide_float uij(&U(i, j));
+            wide_float uijp = LoadMaskedPackedWideFloat(&U(i, j+1), wide_j<jmp1);
+            wide_float uipj = LoadMaskedPackedWideFloat(&U(i+1, j), wide_i<imp1);
+
+            wide_float vimj = LoadMaskedPackedWideFloat(&V(i-1, j), wide_i>zero);
+            wide_float vijm = LoadMaskedPackedWideFloat(&V(i, j-1), wide_j>zero);
+            wide_float vij(&V(i, j));
+            wide_float vijp = LoadMaskedPackedWideFloat(&V(i, j+1), wide_j<jmp1);
+            wide_float vipjm = LoadMaskedPackedWideFloat(&V(i+1, j-1), (wide_i<imp1) & (wide_j>zero));
+            wide_float vipj = LoadMaskedPackedWideFloat(&V(i+1, j), wide_i<imp1);
 
             wide_int domij(&domain(i, j));
-            wide_int domipj(&domain(i+1, j));
-            wide_int domijp(&domain(i, j+1));
+            wide_int domipj = LoadMaskedPackedWideInt(&domain(i+1, j), wide_i<imp1);
+            wide_int domijp = LoadMaskedPackedWideInt(&domain(i, j+1), wide_j<jmp1);
             wide_int obs(OBSTACLE);
 
             // if ((domain(i, j) & OBSTACLE) == 0) {
@@ -301,12 +301,10 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
             // }
 
             wide_float fij(&F(i, j));
-            wide_int right_is_fluid_mask = ( (domij & obs) != 0) & ((domij & E)!=0);
+            wide_int right_is_fluid_mask = ( (domij & obs) != zero) & ((domij & E) != zero);
             ConditionalAssign(&fij, right_is_fluid_mask, uij);
 
-            wide_int wide_i = WideIndex(i);
-            wide_int imp(imax+1);
-            wide_int fluid_and_right_is_fluid = ( (domij & obs) == 0 ) & ( (wide_i < imp) & ((domipj & obs) == 0) );
+            wide_int fluid_and_right_is_fluid = ( (domij & obs) == zero ) & ( (wide_i < imp1) & ((domipj & obs) == zero) );
 
             {
                 dudxdx = (uipj - 2.0f*uij + uimj) * dxinv2;
@@ -318,7 +316,6 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
                 four  = uimj - uij;
                 duudx =        dxinv4 * (      one  * one   -      two  * two )       \
                         + gammadxinv4 * ( Abs(one) * three - Abs(two) * four );
-                // 23
 
                 one   = vij + vipj;
                 two   = uij + uijp;
@@ -328,25 +325,24 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
                 six   = uijm - uij;
                 duvdy = dyinv4 * (      one  * two -        three  * four )      \
                         + gammadyinv4 * ( Abs(one) * five -  Abs(three) * six );
-                // 17
+
                 wide_float result = uij + dt * (Reinv * (dudxdx + dudydy) - duudx - duvdy + gx);
                 ConditionalAssign(&fij, fluid_and_right_is_fluid, result);
-                // 7
             }
 
             StoreWideFloat(&F(i, j), fij);
 
-            wide_int left_is_fluid_mask = ( (domij & obs) != 0 ) & (domij & W);
-            wide_float fimj(&F(i-1, j));
+            wide_int left_is_fluid_mask = ( (domij & obs) != zero ) & (domij & W);
+            wide_float fimj = LoadMaskedPackedWideFloat(&F(i-1, j), wide_i>zero);
             ConditionalAssign(&fimj, left_is_fluid_mask, uimj);
-            StoreWideFloat(&F(i-1, j), fimj);
+            StoreMaskedWideFloat(&F(i-1, j), wide_i>zero, fimj);
 
 
             wide_float gij(&G(i, j));
-            wide_int north_is_fluid_mask = ( (domij & obs) != 0 ) & ((domij & N) != 0);
+            wide_int north_is_fluid_mask = ( (domij & obs) != zero ) & ((domij & N) != zero);
             ConditionalAssign(&gij, north_is_fluid_mask, vij);
 
-            wide_int current_and_north_is_fluid = ( (domij & obs) == 0 ) & ( (wide_j < jmp) & ((domijp & obs)==0) );
+            wide_int current_and_north_is_fluid = ( (domij & obs) == zero ) & ( (wide_j < jmp1) & ((domijp & obs)==zero) );
 
             {
                 dvdxdx = (vipj - 2.0f*vij + vimj) * dxinv2;
@@ -376,10 +372,9 @@ void compute_FG(Matrix& F, Matrix& G, Matrix& U, Matrix& V, Matrixi& domain, flo
             StoreWideFloat(&G(i, j), gij);
 
             wide_int south_is_fluid = ((domij & obs) != 0) & ((domij & S) != 0);
-            wide_float gijm(&G(i, j-1));
+            wide_float gijm = LoadMaskedPackedWideFloat(&G(i, j-1), wide_j>0);
             ConditionalAssign(&gijm, south_is_fluid, vijm);
-            StoreWideFloat(&G(i, j-1), gijm);
-
+            StoreMaskedWideFloat(&G(i, j-1), wide_j>0, gijm);
         }
     }
 };
@@ -396,20 +391,20 @@ void compute_rhs_pressure(Matrix& RHS, Matrix& F, Matrix& G, Matrixi& domain, fl
     wide_float dtinv(1.0f/dt);
 
     for (int j=0; j<jmax+2; ++j) {
-        for (int i=0; i+7<imax+2; i+=8) {
+        wide_int wide_j(j);
+        for (int i=0; i<imax+2; i+=LANE_WIDTH) {
+            wide_int wide_i = WideIndex(i);
+
             wide_int domij(&domain(i, j));
             wide_float fij(&F(i, j));
-            wide_float fimj(&F(i-1, j));
+            wide_float fimj = LoadMaskedPackedWideFloat(&F(i-1, j), wide_i>0);
+
             wide_float gij(&G(i, j));
-            wide_float gijm(&G(i, j-1));
+            wide_float gijm = LoadMaskedPackedWideFloat(&G(i, j-1), wide_j>0);
 
             wide_float result;
             result = dtinv * (dxinv * (fij - fimj) + dyinv * (gij - gijm));
             StoreWideFloat(&RHS(i, j), result);
-
-            // if ((domain(i, j) & OBSTACLE) == 0) {
-            //     RHS(i, j) = dtinv * ( dxinv * ( F(i, j) - F(i-1, j) ) + dyinv * ( G(i, j) - G(i, j-1) ) );
-            // }
         }
     }
 };
@@ -422,12 +417,6 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
     const float omega  = c.omega;
     const float coeff  = c.coeff;
 
-    // static Matrix Pt({jmax+2, imax+2}, 0.0f);
-
-    // for (int j=0; j!=jmax+2; ++j)
-    //     for (int i=0; i!=imax+2; ++i)
-    //         Pt(j, i) = P(i, j);
-
     float rit_tmp;
 
     rit = 0.0f;
@@ -436,18 +425,16 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
     int edges;
 
     // Set pressure boundary conditions
-    for (int j=0; j!=jmax+2; ++j) {
-        for (int i=0; i!=imax+2; ++i) {
+    for (int j=0; j<jmax+2; j++) {
+        for (int i=0; i<imax+2; i++) {
             if (domain(i, j) & OBSTACLE) {
                 tmp_p = 0.0f;
                 edges = 0;
                 if ((domain(i, j) & N)) {
-                    // tmp_p += Pt(j+1, i);
                     tmp_p += P(i, j+1);
                     ++edges;
                 }
                 if ((domain(i, j) & S)) {
-                    // tmp_p += Pt(j-1, i);
                     tmp_p += P(i, j-1);
                     ++edges;
                 }
@@ -460,15 +447,14 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
                     ++edges;
                 }
                 P(i, j) = tmp_p / (float)edges;
-                // Pt(j, i) = P(i, j);
             }
         }
     }
 
 
     // Update pressure
-    for (int j=1; j!=jmax+1; ++j) {
-        for (int i=1; i!=imax+1; ++i) {
+    for (int j=1; j<jmax+1; j++) {
+        for (int i=1; i<imax+1; i++) {
             if ((domain(i, j) & OBSTACLE) == 0) {
                 P(i, j) = (1.0f - omega) * P(i, j)                    \
                     + coeff                                           \
@@ -476,20 +462,17 @@ void SOR(Matrix& P, const Matrix& RHS, const Matrixi& domain, float& rit, const 
                       + dyinv2 * ( P(i, j-1) + P(i, j+1) )            \
                       - RHS(i, j)                                     \
                       );
-                      // + dyinv2 * ( Pt(j-1, i) + Pt(j+1, i) )
-                // Pt(j, i) = P(i, j);
             }
         }
     }
 
     // Compute residual
-    for (int j=1; j!=jmax+1; ++j) {
-        for (int i=1; i!=imax+1; ++i) {
+    for (int j=1; j<jmax+1; j++) {
+        for (int i=1; i<imax+1; i++) {
             if ((domain(i, j) & OBSTACLE) == 0) {
                 rit_tmp = dxinv2 * ( P(i-1, j) - 2.0f*P(i, j) + P(i+1, j) ) \
                         + dyinv2 * ( P(i, j-1) - 2.0f*P(i, j) + P(i, j+1) ) \
                         - RHS(i, j);
-                        // + dyinv2 * ( Pt(j-1, i) - 2.0f*P(i, j) + Pt(j+1, i) )
                 rit = std::max(std::fabs(rit_tmp), rit);
             }
         }
@@ -506,17 +489,20 @@ void compute_uv(Matrix& U, Matrix& V, Matrix& F, Matrix& G, Matrix& P, Matrixi& 
     const float dtdx = dt * dxinv;
     const float dtdy = dt * dyinv;
 
-    for (int j=1; j!=jmax+1; ++j) {
-        for (int i=1; i+7<=imax+1; i+=8) {
-            wide_float pij(&P(i, j));
-            wide_float pijp(&P(i, j+1));
-            wide_float pipj(&P(i+1, j));
+    for (int j=0; j<jmax+2; j++) {
+        wide_int wide_j(j);
+        for (int i=0; i<imax+2; i+=LANE_WIDTH) {
+            wide_int wide_i = WideIndex(i);
 
-            wide_int dij(&domain(i, j));
-            wide_int dipj(&domain(i+1, j));
-            wide_int dijp(&domain(i, j+1));
+            wide_float pij(&P(i, j));
+            wide_float pijp = LoadMaskedPackedWideFloat(&P(i, j+1), wide_j<jmax+1);
+            wide_float pipj = LoadMaskedPackedWideFloat(&P(i+1, j), wide_i<imax+1);
+
             wide_float fij(&F(i, j));
             wide_float gij(&G(i, j));
+
+            // TODO: Maybe todo
+            //  The velocities should only be set between fluid cells
 
             // U
             wide_float result = fij - dtdx * (pipj - pij);

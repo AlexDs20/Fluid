@@ -2,7 +2,7 @@
 
 CONFIG="${1:-release}"
 
-rm -r build/bin/Fluid/
+rm -r build/bin/{Fluid,Tests}
 
 if [ "premake5.lua" -nt "generated/Makefile" ]; then
     echo "Newer premake, deleting generated"

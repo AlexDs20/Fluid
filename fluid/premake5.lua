@@ -2,7 +2,7 @@ workspace "Fluid Simulation"
     location "generated"
     language "C++"
     architecture "x86_64"
-    toolset "clang"
+    toolset "gcc"
 
     configurations { "debug", "release", "dev" }
 
@@ -38,13 +38,6 @@ project "Fluid"
     includedirs
     {
         "src/",
-        -- "src/Console/",
-        -- "src/Input/",
-        -- "src/Math/",
-        -- "src/Message/",
-        -- "src/Physics/",
-        -- "src/Renderer/",
-        -- "src/Utils/",
         "deps/stb/",
         "deps/glad/include/",
         "deps/glfw/include/",
