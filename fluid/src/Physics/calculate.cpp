@@ -4,7 +4,7 @@
 #include "Math/Matrix.hpp"
 #include "Physics/calculate.hpp"
 #include "Physics/define.hpp"
-#include "Math/simd.h"
+#include "Utils/simd.hpp"
 
 
 void set_obstacle_flags(Matrixi& domain, int imax, int jmax) {
@@ -68,13 +68,13 @@ void set_fluid_flags(Matrixi& domain, int imax, int jmax) {
 
             wide_int domij(&domain(i, j));
 
-            // TODO(alex): HOW TO HANDLE THIS?! Go Over the domain size!?
-            if (endi) {
-                wide_int ip1mask = LoadInts(-1,-1,-1,-1,-1,-1,-1,0);
-                wide_int domipj = LoadMaskedPackedWideInt(&domain(i+1, j), ip1mask);
-            } else {
+            // // TODO(alex): HOW TO HANDLE THIS?! Go Over the domain size!?
+            // if (endi) {
+            //     wide_int ip1mask = LoadInts(-1,-1,-1,-1,-1,-1,-1,0);
+            //     wide_int domipj = LoadMaskedPackedWideInt(&domain(i+1, j), ip1mask);
+            // } else {
                 wide_int domipj(&domain(i+1, j));
-            }
+            // }
             wide_int domimj(&domain(i-1, j));
 
             wide_int domijp(&domain(i, j+1));

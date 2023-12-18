@@ -33,17 +33,18 @@ include "deps/glm.lua"
 
 project "Fluid"
     kind "WindowedApp"
-    openmp "On"
+    -- openmp "On"
 
     includedirs
     {
         "src/",
-        "src/Console/",
-        "src/Input/",
-        "src/Math/",
-        "src/Message/",
-        "src/Physics/",
-        "src/Renderer/",
+        -- "src/Console/",
+        -- "src/Input/",
+        -- "src/Math/",
+        -- "src/Message/",
+        -- "src/Physics/",
+        -- "src/Renderer/",
+        -- "src/Utils/",
         "deps/stb/",
         "deps/glad/include/",
         "deps/glfw/include/",
@@ -61,3 +62,17 @@ project "Fluid"
     buildoptions { "-mavx2" }
 
     links { "GLAD", "GLFW", "GLM" }
+
+project "Tests"
+    kind "ConsoleApp"
+
+    includedirs
+    {
+        "src/",
+    }
+
+    files {
+        "tests/*.cpp",
+    }
+
+    buildoptions { "-mavx2" }

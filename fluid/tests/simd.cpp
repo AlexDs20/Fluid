@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <iostream>
 #include <ostream>
-#include "simd.h"
+#include "Utils/simd.hpp"
 
 void print(wide_int a) {
     int v[8];

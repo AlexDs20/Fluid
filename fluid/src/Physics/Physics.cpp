@@ -3,7 +3,7 @@
 #include "Message/Message.hpp"
 #include "Physics/calculate.hpp"
 #include "Physics/Physics.hpp"
-#include "utils.hpp"
+#include "Utils/utils.hpp"
 
 
 Fluid::Fluid(const std::string& problem, MessageBus* m): Sender(m) {

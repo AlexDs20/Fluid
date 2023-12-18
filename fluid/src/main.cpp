@@ -9,7 +9,7 @@
 #include "Console/Console.hpp"
 
 #include "Renderer/utils.hpp"
-#include "utils.hpp"
+#include "Utils/utils.hpp"
 
  unsigned int w = 1920;
  unsigned int h = 1080;
