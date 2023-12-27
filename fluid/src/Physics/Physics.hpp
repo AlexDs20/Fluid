@@ -3,6 +3,7 @@
 #include "Math/Matrix.hpp"
 #include "Message/Message.hpp"
 #include "Physics/calculate.hpp"
+#include "Physics/particles.hpp"
 
 
 class Fluid: public Sender {
@@ -21,5 +22,5 @@ public:
     Matrix *G;
     Matrix *RHS;
     Matrixi *domain;
+    Particles particles;
 };
-

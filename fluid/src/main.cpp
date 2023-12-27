@@ -64,7 +64,7 @@ int main() {
         input.update();
         processInput(renderer.window);
 
-        { // Timer t;
+        { Timer t;
         fluid.update();
         }
 
@@ -79,8 +79,8 @@ int main() {
         deltaTime = durationFrame/1000000.;
         n++;
 
-        if (n == 200)
-            break;
+        // if (n == 200)
+        //     break;
     };
 
     return 0;

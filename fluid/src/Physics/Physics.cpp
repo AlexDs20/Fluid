@@ -3,6 +3,7 @@
 #include "Message/Message.hpp"
 #include "Physics/calculate.hpp"
 #include "Physics/Physics.hpp"
+#include "Physics/particles.hpp"
 #include "Utils/utils.hpp"
 
 
@@ -21,6 +22,13 @@ Fluid::Fluid(const std::string& problem, MessageBus* m): Sender(m) {
     set_constant_flags(*domain, params.imax, params.jmax);                          // probably need the std::string problem here
                                                                                     // Scalar: 220 -> 430 mus
                                                                                     // Vector: 100 mus
+    // Initialize the particles to show
+    int N = 100;
+    float xS = 0.5f*constants.dx;
+    float yS = 0.5f*params.ylength - 5*constants.dy;
+    float xE = xS;
+    float yE = 0.5f*params.ylength + 5*constants.dy;
+    particles = init_particles(N, xS, yS, xE, yE);
 };
 
 Fluid::~Fluid(){
@@ -57,5 +65,7 @@ void Fluid::update(){
     } while (it < it_max && rit > params.eps);
 
     compute_uv(*U, *V, *F, *G, *P, *domain, dt, constants);                          // 400 -- 670 mus
+    move_particles(particles, constants.imax, constants.jmax,
+            constants.dx, constants.dy, dt, U, V);
 // #endif                                                                                 // Vector: 125 -- 310
 };
