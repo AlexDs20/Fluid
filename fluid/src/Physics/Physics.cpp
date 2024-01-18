@@ -37,7 +37,6 @@ Fluid::~Fluid(){
 // { int n = 200; Timer t(n); for (int it=0; it<n; ++it)
 // }
 void Fluid::update(){
-// #if 0
     float dt;
     set_boundary_values(*U, *V, *domain, constants.imax, constants.jmax);            // 70 -- 81 mus
     set_specific_boundary_values(*U, *V, constants.imax, constants.jmax);            // 4 mus
@@ -57,5 +56,4 @@ void Fluid::update(){
     } while (it < it_max && rit > params.eps);
 
     compute_uv(*U, *V, *F, *G, *P, *domain, dt, constants);                          // 400 -- 670 mus
-// #endif                                                                                 // Vector: 125 -- 310
 };

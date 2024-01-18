@@ -518,7 +518,7 @@ void compute_uv(Matrix& U, Matrix& V, Matrix& F, Matrix& G, Matrix& P, Matrixi& 
 void get_parameters(const std::string& problem, Parameters& params, Constants& constants){
     if (problem == "inflow"){
         // Fluid
-        params.Re = 10000;
+        params.Re = 20;
         params.u0 = 0.0f;
         params.v0 = 0.0f;
         params.p0 = 0.0f;

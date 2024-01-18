@@ -11,25 +11,30 @@
 #include "Renderer/utils.hpp"
 #include "Utils/utils.hpp"
 
- unsigned int w = 1920;
- unsigned int h = 1080;
- Camera camera(glm::vec3(0.0f,0.0f, 5.0f));
- float lastX = w / 2.0f;
- float lastY = h / 2.0f;
- bool firstMouse = true;
+unsigned int w = 1024;
+unsigned int h = 768;
+Camera camera(glm::vec3(0.0f,0.0f, 5.0f));
+float lastX = w / 2.0f;
+float lastY = h / 2.0f;
+bool firstMouse = true;
 float deltaTime = 0.0f;
 
+#define _GRAPH
 
 int main() {
     MessageBus messageBus;
+#ifdef _GRAPH
     Renderer renderer(&messageBus);
     Input input(&messageBus, renderer.window);
+#endif
     Console console;
     Fluid fluid("inflow", &messageBus);
 
     // messageBus.add_receiver(physics.read_message);
+#ifdef _GRAPH
     messageBus.add_receiver(renderer.read_message);
     messageBus.add_receiver(input.read_message);
+#endif
     messageBus.add_receiver(console.read_message);
 
     //--------------------
@@ -61,15 +66,19 @@ int main() {
     int n=0;
     while (running) {
         auto startFrameTime = std::chrono::system_clock::now();
+#ifdef _GRAPH
         input.update();
         processInput(renderer.window);
+#endif
 
         { // Timer t;
         fluid.update();
         }
 
+#ifdef _GRAPH
         running = renderer.update(quads, fluid.constants.imax+2, fluid.constants.jmax+2);
         glfwPollEvents();
+#endif
 
         messageBus.dispatch();
 
@@ -79,8 +88,6 @@ int main() {
         deltaTime = durationFrame/1000000.;
         n++;
 
-        if (n == 200)
-            break;
     };
 
     return 0;
