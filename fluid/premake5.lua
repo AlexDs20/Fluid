@@ -2,7 +2,7 @@ workspace "Fluid Simulation"
     location "generated"
     language "C++"
     architecture "x86_64"
-    toolset "gcc"
+    toolset "clang"
 
     configurations { "debug", "release", "dev" }
 
